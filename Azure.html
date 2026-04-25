@@ -1,0 +1,577 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Virtual machines - Microsoft Azure</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:"Segoe UI",system-ui,sans-serif;font-size:13px;background:#f3f2f1;color:#201f1e;}
+.topbar{background:#0078d4;height:48px;display:flex;align-items:center;padding:0 12px;gap:4px;position:sticky;top:0;z-index:200;}
+.tb-logo{display:flex;align-items:center;gap:8px;color:#fff;font-size:14px;font-weight:400;padding-right:14px;border-right:1px solid rgba(255,255,255,.3);margin-right:6px;}
+.tb-search{flex:1;max-width:440px;display:flex;align-items:center;background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.3);border-radius:2px;padding:0 10px;height:30px;gap:8px;}
+.tb-search input{background:transparent;border:none;outline:none;color:#fff;font-size:13px;width:100%;}
+.tb-search input::placeholder{color:rgba(255,255,255,.75);}
+.tb-right{margin-left:auto;display:flex;align-items:center;gap:2px;}
+.tb-ico{width:36px;height:36px;display:flex;align-items:center;justify-content:center;color:#fff;cursor:pointer;border-radius:2px;font-size:16px;}
+.tb-ico:hover{background:rgba(255,255,255,.15);}
+.tb-user{display:flex;align-items:center;gap:6px;color:#fff;font-size:12px;padding:4px 8px;cursor:pointer;border-radius:2px;}
+.tb-user:hover{background:rgba(255,255,255,.15);}
+.layout{display:flex;height:calc(100vh - 48px);overflow:hidden;}
+.icon-sb{width:48px;background:#1f1f1f;display:flex;flex-direction:column;align-items:center;padding:6px 0;gap:2px;flex-shrink:0;}
+.icon-sb .ico{width:40px;height:40px;border-radius:4px;display:flex;align-items:center;justify-content:center;color:#ccc;cursor:pointer;font-size:16px;}
+.icon-sb .ico:hover{background:rgba(255,255,255,.12);color:#fff;}
+.sidebar{width:220px;background:#fff;border-right:1px solid #edebe9;overflow-y:auto;flex-shrink:0;}
+.sb-create{padding:12px 16px;display:flex;align-items:center;gap:8px;color:#0078d4;font-size:13px;font-weight:600;cursor:pointer;border-bottom:1px solid #edebe9;}
+.sb-create:hover{background:#f3f9ff;}
+.sb-item{padding:8px 16px;font-size:13px;cursor:pointer;display:flex;align-items:center;gap:8px;border-left:3px solid transparent;}
+.sb-item:hover{background:#f3f9ff;color:#0078d4;}
+.sb-item.active{background:#f3f9ff;color:#0078d4;font-weight:600;border-left-color:#0078d4;}
+.sb-div{padding:6px 16px 4px;font-size:11px;font-weight:700;color:#605e5c;text-transform:uppercase;background:#f8f8f8;border-bottom:1px solid #edebe9;border-top:1px solid #edebe9;margin-top:4px;}
+.main{flex:1;overflow-y:auto;display:flex;flex-direction:column;}
+.breadcrumb{padding:8px 24px;font-size:12px;color:#605e5c;border-bottom:1px solid #edebe9;background:#fff;display:flex;align-items:center;gap:6px;}
+.bc-link{color:#0078d4;cursor:pointer;}
+.bc-link:hover{text-decoration:underline;}
+.page{padding:0 24px 24px;}
+.page-title{font-size:21px;font-weight:400;padding:14px 0 4px;}
+.toolbar{display:flex;align-items:center;border-bottom:2px solid #edebe9;margin-bottom:12px;flex-wrap:wrap;}
+.tb-btn{display:flex;align-items:center;gap:5px;padding:8px 14px;font-size:13px;cursor:pointer;border:none;background:transparent;white-space:nowrap;border-bottom:2px solid transparent;margin-bottom:-2px;}
+.tb-btn:hover{background:#f3f9ff;color:#0078d4;border-bottom-color:#0078d4;}
+.tb-btn.primary{color:#0078d4;font-weight:600;}
+.filter-row{display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;}
+.f-search{display:flex;align-items:center;border:1px solid #8a8886;border-radius:2px;padding:0 8px;height:30px;gap:6px;background:#fff;min-width:200px;}
+.f-search input{border:none;outline:none;font-size:13px;width:100%;}
+.f-sel{border:1px solid #8a8886;border-radius:2px;padding:0 24px 0 8px;height:30px;font-size:13px;background:#fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%23666'/%3E%3C/svg%3E") no-repeat right 8px center;appearance:none;cursor:pointer;min-width:140px;}
+.f-sel:focus{outline:none;border-color:#0078d4;}
+.table-area{display:flex;overflow:hidden;flex:1;}
+.table-wrap{flex:1;overflow:auto;background:#fff;border:1px solid #edebe9;}
+.t-info{padding:8px 14px;font-size:13px;border-bottom:1px solid #edebe9;display:flex;align-items:center;}
+.t-count{font-weight:600;}
+table{width:100%;border-collapse:collapse;}
+thead tr{background:#faf9f8;}
+thead th{padding:9px 12px;text-align:left;font-size:12px;font-weight:700;color:#605e5c;white-space:nowrap;cursor:pointer;border-bottom:2px solid #edebe9;}
+thead th:hover{background:#f3f2f1;}
+tbody tr{border-bottom:1px solid #f3f2f1;cursor:pointer;transition:background .1s;}
+tbody tr:hover{background:#f3f9ff;}
+tbody tr.sel-row{background:#eff6fc;}
+tbody td{padding:9px 12px;font-size:13px;vertical-align:middle;}
+.vm-link{color:#0078d4;cursor:pointer;}
+.vm-link:hover{text-decoration:underline;}
+.rg-link{color:#0078d4;cursor:pointer;}
+.status{display:inline-flex;align-items:center;gap:5px;font-weight:600;}
+.status-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+.s-run{color:#107c10;} .s-run .status-dot{background:#107c10;}
+.s-deal{color:#a80000;} .s-deal .status-dot{background:#a80000;}
+.s-stop{color:#d13212;} .s-stop .status-dot{background:#d13212;}
+.s-start{color:#986f0b;} .s-start .status-dot{background:#986f0b;animation:pulse .8s infinite;}
+.s-stopping{color:#986f0b;} .s-stopping .status-dot{background:#986f0b;animation:pulse .8s infinite;}
+.s-restart{color:#0078d4;} .s-restart .status-dot{background:#0078d4;animation:pulse .7s infinite;}
+.s-create{color:#986f0b;} .s-create .status-dot{background:#986f0b;animation:pulse .9s infinite;}
+.s-del{color:#d13212;} .s-del .status-dot{background:#d13212;animation:pulse .6s infinite;}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.2}}
+/* BLADE */
+.blade{width:0;background:#fff;border-left:1px solid #edebe9;transition:width .3s;flex-shrink:0;display:flex;flex-direction:column;overflow:hidden;}
+.blade.open{width:420px;}
+.blade-hdr{padding:14px 18px;border-bottom:1px solid #edebe9;position:relative;flex-shrink:0;}
+.blade-title{font-size:17px;font-weight:400;color:#201f1e;}
+.blade-sub{font-size:12px;color:#605e5c;margin-top:2px;}
+.blade-x{position:absolute;top:14px;right:14px;cursor:pointer;color:#605e5c;font-size:18px;background:none;border:none;}
+.blade-status{display:flex;align-items:center;gap:10px;padding:8px 18px;border-bottom:1px solid #edebe9;background:#faf9f8;font-size:13px;flex-shrink:0;}
+.blade-tb{display:flex;gap:4px;padding:8px 14px;border-bottom:1px solid #edebe9;flex-wrap:wrap;flex-shrink:0;}
+.blade-tbtn{padding:5px 10px;border:1px solid #8a8886;border-radius:2px;background:#fff;font-size:12px;cursor:pointer;}
+.blade-tbtn:hover{background:#f3f9ff;border-color:#0078d4;color:#0078d4;}
+.blade-tabs{display:flex;border-bottom:2px solid #edebe9;padding:0 18px;flex-shrink:0;overflow-x:auto;}
+.blade-tab{padding:8px 12px;font-size:13px;color:#605e5c;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px;white-space:nowrap;}
+.blade-tab.active{color:#0078d4;border-bottom-color:#0078d4;font-weight:600;}
+.blade-body{flex:1;overflow-y:auto;padding:14px 18px;}
+.b-sec{font-size:13px;font-weight:700;color:#201f1e;margin-bottom:8px;padding-bottom:5px;border-bottom:1px solid #f3f2f1;}
+.b-row{display:flex;margin-bottom:7px;gap:8px;font-size:13px;}
+.b-key{color:#605e5c;min-width:130px;font-weight:600;flex-shrink:0;}
+/* TOASTS */
+.toasts{position:fixed;top:58px;right:16px;z-index:9999;display:flex;flex-direction:column;gap:8px;}
+.toast{background:#fff;border:1px solid #edebe9;border-radius:2px;padding:10px 14px;max-width:360px;box-shadow:0 4px 16px rgba(0,0,0,.15);display:flex;gap:10px;align-items:flex-start;animation:slideIn .3s ease;}
+.toast.success{border-left:4px solid #107c10;}
+.toast.info{border-left:4px solid #0078d4;}
+.toast.warning{border-left:4px solid #986f0b;}
+.t-ico{font-size:16px;flex-shrink:0;}
+.t-title{font-weight:700;font-size:13px;margin-bottom:2px;}
+.t-msg{font-size:12px;color:#605e5c;}
+.t-x{margin-left:auto;cursor:pointer;color:#8a8886;font-size:14px;}
+@keyframes slideIn{from{opacity:0;transform:translateX(20px)}to{opacity:1;transform:translateX(0)}}
+@keyframes fadeOut{to{opacity:0;transform:translateX(20px)}}
+/* MODAL */
+.overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:400;align-items:center;justify-content:center;}
+.overlay.on{display:flex;}
+.modal{background:#fff;border-radius:2px;max-width:500px;width:90%;box-shadow:0 8px 32px rgba(0,0,0,.25);animation:popIn .2s ease;}
+@keyframes popIn{from{opacity:0;transform:scale(.97)}to{opacity:1;transform:scale(1)}}
+.m-head{padding:14px 20px;border-bottom:1px solid #edebe9;display:flex;align-items:center;justify-content:space-between;}
+.m-title{font-size:15px;font-weight:600;}
+.m-close{cursor:pointer;color:#605e5c;font-size:18px;background:none;border:none;}
+.m-body{padding:18px 20px;}
+.m-foot{padding:12px 20px;border-top:1px solid #edebe9;display:flex;justify-content:flex-end;gap:8px;}
+.danger-box{background:#fde7e9;border:1px solid #d13212;border-radius:2px;padding:10px 14px;margin-bottom:14px;font-size:13px;display:flex;gap:8px;}
+.m-inp{width:100%;border:1px solid #8a8886;border-radius:0;padding:6px 10px;font-size:13px;outline:none;margin-top:6px;}
+.m-inp:focus{border-color:#0078d4;box-shadow:0 0 0 1px #0078d4;}
+/* BUTTONS */
+.az-btn{padding:6px 16px;border-radius:2px;cursor:pointer;font-size:13px;font-weight:600;border:none;}
+.btn-primary{background:#0078d4;color:#fff;}
+.btn-primary:hover{background:#005a9e;}
+.btn-sec{background:#fff;border:1px solid #8a8886;color:#201f1e;}
+.btn-sec:hover{background:#f3f2f1;}
+.btn-danger{background:#c50f1f;color:#fff;}
+.btn-danger:hover{background:#a10e1a;}
+/* SUCCESS */
+.suc-bar{background:#dff6dd;border:1px solid #107c10;border-radius:2px;padding:12px 16px;margin:10px 0;display:flex;align-items:flex-start;gap:10px;animation:slideIn .3s ease;}
+.suc-x{margin-left:auto;cursor:pointer;color:#605e5c;}
+/* CONNECT TERMINAL */
+.term-hdr{background:#1e1e1e;border-radius:4px 4px 0 0;padding:8px 12px;display:flex;align-items:center;gap:6px;}
+.t-dot{width:12px;height:12px;border-radius:50%;}
+.t-red{background:#ff5f57;} .t-yellow{background:#febc2e;} .t-green{background:#28c840;}
+.term-ttl{flex:1;text-align:center;font-size:11px;color:#888;}
+.terminal{background:#0c0c0c;border-radius:0 0 4px 4px;padding:14px;font-family:'Courier New',monospace;font-size:13px;color:#cccccc;min-height:180px;}
+.t-out{color:#9cdcfe;} .t-ok{color:#4ec9b0;} .t-prompt{color:#4ec9b0;}
+.t-cursor{display:inline-block;width:8px;height:14px;background:#cccccc;animation:blink2 1s infinite;vertical-align:middle;}
+@keyframes blink2{0%,100%{opacity:1}50%{opacity:0}}
+/* WIZARD */
+.wz-ol{display:none;position:fixed;inset:0;z-index:300;}
+.wz-ol.on{display:flex;}
+.wz-back{position:absolute;inset:0;background:rgba(0,0,0,.4);}
+.wz-panel{position:absolute;top:0;right:0;bottom:0;width:740px;background:#fff;box-shadow:-6px 0 24px rgba(0,0,0,.2);display:flex;flex-direction:column;}
+.wz-hdr{background:#0078d4;padding:14px 20px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;}
+.wz-title{color:#fff;font-size:17px;font-weight:400;}
+.wz-x{color:rgba(255,255,255,.8);cursor:pointer;font-size:20px;background:none;border:none;}
+.wz-steps{display:flex;background:#f8f8f8;border-bottom:1px solid #edebe9;flex-shrink:0;overflow-x:auto;}
+.wz-step{padding:10px 14px;font-size:12px;color:#605e5c;cursor:pointer;border-bottom:3px solid transparent;white-space:nowrap;display:flex;align-items:center;gap:5px;}
+.wz-step.active{color:#0078d4;border-bottom-color:#0078d4;background:#fff;font-weight:600;}
+.wz-step.done{color:#107c10;}
+.wz-num{width:18px;height:18px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;background:#d2d0ce;color:#fff;}
+.wz-step.active .wz-num{background:#0078d4;}
+.wz-step.done .wz-num{background:#107c10;}
+.wz-body{flex:1;overflow-y:auto;padding:20px 24px;}
+.wz-foot{border-top:1px solid #edebe9;padding:12px 24px;background:#fff;flex-shrink:0;display:flex;align-items:center;justify-content:space-between;}
+.cost-wrap{font-size:12px;color:#605e5c;}
+.cost-amt{font-size:15px;font-weight:700;color:#201f1e;}
+/* FORM */
+.f-sec{margin-bottom:22px;}
+.f-sec-title{font-size:14px;font-weight:700;margin-bottom:3px;padding-bottom:6px;border-bottom:1px solid #edebe9;}
+.f-sec-desc{font-size:12px;color:#605e5c;margin-bottom:12px;}
+.f-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;}
+.f-full{grid-template-columns:1fr;}
+.f-label{font-size:13px;font-weight:600;margin-bottom:4px;display:block;}
+.f-req{color:#d13212;}
+.f-inp{width:100%;border:1px solid #8a8886;border-radius:0;padding:6px 10px;font-size:13px;outline:none;background:#fff;}
+.f-inp:focus{border-color:#0078d4;box-shadow:0 0 0 1px #0078d4;}
+.f-fsel{width:100%;border:1px solid #8a8886;border-radius:0;padding:6px 10px;font-size:13px;outline:none;background:#fff;cursor:pointer;appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%23666'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 8px center;padding-right:26px;}
+.f-fsel:focus{border-color:#0078d4;}
+.f-hint{font-size:11px;color:#605e5c;margin-top:3px;}
+.img-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.img-card{border:1px solid #d2d0ce;padding:10px;cursor:pointer;display:flex;align-items:center;gap:10px;transition:all .15s;border-radius:2px;}
+.img-card:hover{border-color:#0078d4;background:#f3f9ff;}
+.img-card.sel{border-color:#0078d4;border-width:2px;background:#eff6fc;}
+.img-ico{font-size:22px;width:28px;text-align:center;flex-shrink:0;}
+.img-name{font-size:13px;font-weight:600;}
+.img-sub{font-size:11px;color:#605e5c;margin-top:2px;}
+.badge-free{background:#dff6dd;color:#107c10;border:1px solid #107c10;border-radius:2px;padding:1px 5px;font-size:10px;font-weight:700;}
+.sz-table{border:1px solid #d2d0ce;overflow:hidden;}
+.sz-table table{width:100%;border-collapse:collapse;}
+.sz-table th{background:#f8f8f8;padding:7px 10px;font-size:12px;font-weight:700;color:#605e5c;text-align:left;border-bottom:1px solid #edebe9;}
+.sz-table tr{border-bottom:1px solid #f3f2f1;cursor:pointer;}
+.sz-table tr:hover{background:#f3f9ff;}
+.sz-table tr.sel{background:#eff6fc;}
+.sz-table td{padding:7px 10px;font-size:13px;}
+/* DEPLOY */
+.deploy-screen{padding:32px 20px;text-align:center;}
+.az-spin{width:52px;height:52px;border:4px solid #edebe9;border-top-color:#0078d4;border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 18px;}
+@keyframes spin{to{transform:rotate(360deg)}}
+.dep-step{display:flex;align-items:center;gap:10px;padding:6px 0;font-size:13px;text-align:left;max-width:360px;margin:0 auto;}
+.dep-dot{width:18px;height:18px;border-radius:50%;border:2px solid #d2d0ce;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:10px;background:#fff;transition:all .3s;}
+.dep-dot.active{border-color:#0078d4;border-width:3px;}
+.dep-dot.done{background:#107c10;border-color:#107c10;color:#fff;}
+</style>
+</head>
+<body>
+<!-- TOP BAR -->
+<header class="topbar">
+  <div class="tb-logo">
+    <svg width="20" height="20" viewBox="0 0 22 22"><rect x="1" y="1" width="9" height="9" fill="#f25022"/><rect x="12" y="1" width="9" height="9" fill="#7fba00"/><rect x="1" y="12" width="9" height="9" fill="#00a4ef"/><rect x="12" y="12" width="9" height="9" fill="#ffb900"/></svg>
+    Microsoft Azure
+  </div>
+  <div class="tb-search"><span>🔍</span><input placeholder="Search resources, services, and docs (G+/)"></div>
+  <div class="tb-right">
+    <div class="tb-ico">☁</div><div class="tb-ico">🔔</div><div class="tb-ico">⚙</div><div class="tb-ico">?</div>
+    <div class="tb-user"><svg width="26" height="26" viewBox="0 0 26 26"><circle cx="13" cy="13" r="12" fill="rgba(255,255,255,.2)"/><circle cx="13" cy="10" r="4.5" fill="rgba(255,255,255,.85)"/><ellipse cx="13" cy="21" rx="8" ry="5" fill="rgba(255,255,255,.85)"/></svg> ernesto.diaz</div>
+  </div>
+</header>
+
+<div class="layout">
+  <aside class="icon-sb">
+    <div class="ico">⌂</div><div class="ico">☰</div><div class="ico">★</div>
+    <div class="ico" style="margin-top:8px">🔔</div><div class="ico">⚙</div>
+  </aside>
+  <aside class="sidebar">
+    <div class="sb-create" onclick="openWizard()">+ Create a resource</div>
+    <div class="sb-item">⌂ Home</div>
+    <div class="sb-item">📊 Dashboard</div>
+    <div class="sb-item">☰ All services</div>
+    <div class="sb-div">FAVORITES</div>
+    <div class="sb-item">🗂 All resources</div>
+    <div class="sb-item">📁 Resource groups</div>
+    <div class="sb-item">🌐 App Services</div>
+    <div class="sb-item">🗄 SQL databases</div>
+    <div class="sb-item">🌀 Azure Cosmos DB</div>
+    <div class="sb-item active">💻 Virtual machines</div>
+    <div class="sb-item">⚖ Load balancers</div>
+    <div class="sb-item">💾 Storage accounts</div>
+    <div class="sb-item">🌐 Virtual networks</div>
+    <div class="sb-item">👤 Azure Active Directory</div>
+    <div class="sb-item">📈 Monitor</div>
+    <div class="sb-item">💡 Advisor</div>
+    <div class="sb-item">🔒 Security Center</div>
+    <div class="sb-item">💰 Cost Management + Billing</div>
+    <div class="sb-item">❓ Help + support</div>
+  </aside>
+
+  <main class="main">
+    <div class="breadcrumb"><span class="bc-link">Home</span> <span>&gt;</span> <span>Virtual machines</span></div>
+    <div class="page">
+
+      <div class="suc-bar" id="sucBar" style="display:none">
+        <div style="color:#107c10;font-size:18px;flex-shrink:0">✅</div>
+        <div><div style="font-weight:700;color:#107c10;font-size:13px">Your deployment is complete</div>
+        <div id="sucText" style="font-size:13px;color:#201f1e;margin-top:2px"></div></div>
+        <div class="suc-x" onclick="this.parentElement.style.display='none'">✕</div>
+      </div>
+
+      <div class="page-title">Virtual machines</div>
+
+      <div class="toolbar">
+        <div class="tb-btn primary" onclick="openWizard()">+ Create ▾</div>
+        <div class="tb-btn" onclick="toast('info','Refreshed','List refreshed successfully.')">🔄 Refresh</div>
+        <div class="tb-btn" style="color:#d13212" id="btnDelete" onclick="openDelModal()">🗑 Delete</div>
+        <div class="tb-btn" id="btnStart" onclick="vmAction('start')">▶ Start</div>
+        <div class="tb-btn" id="btnRestart" onclick="vmAction('restart')">↺ Restart</div>
+        <div class="tb-btn" id="btnStop" onclick="vmAction('stop')">⏹ Stop</div>
+        <div class="tb-btn">⚡ Services</div>
+      </div>
+
+      <div class="filter-row">
+        <div class="f-search"><span>🔍</span><input id="vmFilt" placeholder="Filter by name..." oninput="renderTable()"></div>
+        <select class="f-sel" id="rgFilt" onchange="renderTable()">
+          <option value="">All resource groups</option>
+          <option>therebeladmin</option><option>rg-production</option><option>rg-development</option>
+        </select>
+        <select class="f-sel"><option>All types</option></select>
+        <select class="f-sel"><option>All locations</option></select>
+      </div>
+
+      <div class="table-area">
+        <div class="table-wrap">
+          <div class="t-info"><span class="t-count" id="vmCount">4 virtual machines</span>
+            <span style="margin-left:auto;color:#0078d4;font-size:12px;cursor:pointer">Manage view ▾</span>
+          </div>
+          <table>
+            <thead><tr>
+              <th style="width:36px"><input type="checkbox" id="selAll" onchange="toggleAll(this)"></th>
+              <th>Name ↕</th><th>Type</th><th>Status ↕</th><th>Resource group ↕</th><th>Location</th><th>Subscription</th><th>Size</th>
+            </tr></thead>
+            <tbody id="vmBody"></tbody>
+          </table>
+        </div>
+
+        <!-- BLADE PANEL -->
+        <div class="blade" id="bladePanel">
+          <div class="blade-hdr">
+            <div class="blade-title" id="bladeTitle">VM Name</div>
+            <div class="blade-sub" id="bladeSub">Virtual machine</div>
+            <button class="blade-x" onclick="closeBlade()">✕</button>
+          </div>
+          <div class="blade-status" id="bladeStatus"></div>
+          <div class="blade-tb">
+            <button class="blade-tbtn" onclick="openConn()">🔌 Connect ▾</button>
+            <button class="blade-tbtn" onclick="vmAction('start')">▶ Start</button>
+            <button class="blade-tbtn" onclick="vmAction('restart')">↺ Restart</button>
+            <button class="blade-tbtn" onclick="vmAction('stop')">⏹ Stop</button>
+            <button class="blade-tbtn" onclick="vmAction('deallocate')">⊡ Deallocate</button>
+            <button class="blade-tbtn" style="color:#d13212" onclick="openDelModal()">🗑 Delete</button>
+          </div>
+          <div class="blade-tabs">
+            <div class="blade-tab active" onclick="bladeTab(this,'ov')">Overview</div>
+            <div class="blade-tab" onclick="bladeTab(this,'net')">Networking</div>
+            <div class="blade-tab" onclick="bladeTab(this,'disks')">Disks</div>
+            <div class="blade-tab" onclick="bladeTab(this,'mon')">Monitoring</div>
+          </div>
+          <div class="blade-body" id="bladeBody"></div>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<div class="toasts" id="toasts"></div>
+
+<!-- DELETE MODAL -->
+<div class="overlay" id="delModal">
+  <div class="modal">
+    <div class="m-head"><span class="m-title">Delete virtual machine</span><button class="m-close" onclick="closeM('delModal')">✕</button></div>
+    <div class="m-body">
+      <div class="danger-box">⚠️ <span>This action is permanent and cannot be undone.</span></div>
+      <div style="font-size:13px">Type <strong>yes</strong> to confirm deletion.</div>
+      <input class="m-inp" id="delInp" placeholder="yes" oninput="chkDel(this)">
+    </div>
+    <div class="m-foot">
+      <button class="az-btn btn-sec" onclick="closeM('delModal')">Cancel</button>
+      <button class="az-btn btn-danger" id="delBtn" disabled onclick="vmAction('delete')">Delete</button>
+    </div>
+  </div>
+</div>
+
+<!-- CONNECT MODAL -->
+<div class="overlay" id="connModal">
+  <div class="modal" style="max-width:620px">
+    <div class="m-head"><span class="m-title">Connect to virtual machine</span><button class="m-close" onclick="closeM('connModal')">✕</button></div>
+    <div class="m-body">
+      <div style="display:flex;gap:0;border-bottom:1px solid #edebe9;margin-bottom:14px">
+        <div id="ct1" style="padding:8px 14px;font-size:13px;cursor:pointer;border-bottom:2px solid #0078d4;color:#0078d4;font-weight:600">SSH</div>
+        <div id="ct2" style="padding:8px 14px;font-size:13px;cursor:pointer;border-bottom:2px solid transparent;color:#605e5c" onclick="swConnTab('ct2')">Azure Bastion</div>
+        <div id="ct3" style="padding:8px 14px;font-size:13px;cursor:pointer;border-bottom:2px solid transparent;color:#605e5c" onclick="swConnTab('ct3')">RDP</div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
+        <div><div class="f-label">IP address</div><input class="f-inp" id="connIP" readonly style="background:#f8f8f8"></div>
+        <div><div class="f-label">Port</div><input class="f-inp" value="22"></div>
+      </div>
+      <div style="margin-bottom:12px"><div class="f-label">Username</div><input class="f-inp" value="azureuser"></div>
+      <button id="connBtn" class="az-btn btn-primary" onclick="simulateSSH()">Connect</button>
+      <div id="termArea" style="display:none;margin-top:12px">
+        <div class="term-hdr"><div class="t-dot t-red"></div><div class="t-dot t-yellow"></div><div class="t-dot t-green"></div><div class="term-ttl">azureuser@<span id="termHost"></span></div></div>
+        <div class="terminal" id="termBody"></div>
+      </div>
+    </div>
+    <div class="m-foot"><button class="az-btn btn-sec" onclick="closeM('connModal')">Close</button></div>
+  </div>
+</div>
+
+<!-- WIZARD -->
+<div class="wz-ol" id="wzOl">
+  <div class="wz-back" onclick="closeWizard()"></div>
+  <div class="wz-panel">
+    <div class="wz-hdr"><span class="wz-title">Create a virtual machine</span><button class="wz-x" onclick="closeWizard()">✕</button></div>
+    <div class="wz-steps" id="wzSteps">
+      <div class="wz-step active" id="ws1" onclick="goWS(1)"><div class="wz-num">1</div>Basics</div>
+      <div class="wz-step" id="ws2" onclick="goWS(2)"><div class="wz-num">2</div>Disks</div>
+      <div class="wz-step" id="ws3" onclick="goWS(3)"><div class="wz-num">3</div>Networking</div>
+      <div class="wz-step" id="ws4" onclick="goWS(4)"><div class="wz-num">4</div>Management</div>
+      <div class="wz-step" id="ws5" onclick="goWS(5)"><div class="wz-num">5</div>Tags</div>
+      <div class="wz-step" id="ws6" onclick="goWS(6)"><div class="wz-num">6</div>Review + create</div>
+    </div>
+    <div class="wz-body" id="wzBody"></div>
+    <div class="wz-foot" id="wzFoot">
+      <div class="cost-wrap">Estimated monthly cost<div class="cost-amt" id="wzCost">~$14.60 USD</div></div>
+      <div style="display:flex;gap:8px">
+        <button class="az-btn btn-sec" id="wzPrev" onclick="wzBack()" style="display:none">‹ Previous</button>
+        <button class="az-btn btn-sec" onclick="closeWizard()">Cancel</button>
+        <button class="az-btn btn-primary" id="wzFwd" onclick="wzFwd()">Next: Disks ›</button>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+let vms=[
+  {id:'vm-01',name:'VM-01',state:'running',rg:'therebeladmin',loc:'East US',size:'Standard_B2s',os:'Linux',ip:'40.112.72.205',launched:'2026-01-10'},
+  {id:'vm-web',name:'vm-webserver-prod',state:'running',rg:'rg-production',loc:'East US',size:'Standard_D4s_v5',os:'Windows',ip:'13.92.153.246',launched:'2026-02-15'},
+  {id:'vm-db',name:'vm-database-01',state:'running',rg:'rg-production',loc:'East US',size:'Standard_E8s_v5',os:'Linux',ip:'52.170.84.33',launched:'2026-03-01'},
+  {id:'vm-dev',name:'vm-devtest-ernesto',state:'deallocated',rg:'rg-development',loc:'West US 2',size:'Standard_B1s',os:'Linux',ip:'—',launched:'2026-04-01'},
+];
+let cfg={name:'',rg:'therebeladmin',loc:'East US',img:'ubuntu',imgName:'Ubuntu Server 22.04 LTS',size:'Standard_B1s',auth:'password',user:'azureuser'};
+let selId=null,wzStep=1;
+const costs={'Standard_B1s':'~$14.60','Standard_B2s':'~$29.20','Standard_D2s_v5':'~$96.36','Standard_D4s_v5':'~$192.72','Standard_E4s_v5':'~$252.00','Standard_E8s_v5':'~$504.00'};
+const imgMap={ubuntu:{n:'Ubuntu Server 22.04 LTS',os:'Linux'},windows:{n:'Windows Server 2022 Datacenter',os:'Windows'},redhat:{n:'Red Hat Enterprise Linux 9',os:'Linux'},debian:{n:'Debian 12 "Bookworm"',os:'Linux'}};
+
+function stHtml(s){const m={running:{c:'s-run',l:'Running'},stopped:{c:'s-stop',l:'Stopped'},deallocated:{c:'s-deal',l:'Stopped (deallocated)'},starting:{c:'s-start',l:'Starting'},stopping:{c:'s-stopping',l:'Stopping'},restarting:{c:'s-restart',l:'Restarting'},deleting:{c:'s-del',l:'Deleting'},creating:{c:'s-create',l:'Creating'}};const d=m[s]||{c:'s-deal',l:s};return`<span class="status ${d.c}"><span class="status-dot"></span>${d.l}</span>`;}
+
+function renderTable(){
+  const q=document.getElementById('vmFilt')?.value.toLowerCase()||'';
+  const rg=document.getElementById('rgFilt')?.value||'';
+  const b=document.getElementById('vmBody');if(!b)return;
+  b.innerHTML='';let n=0;
+  vms.forEach(vm=>{
+    if(vm.state==='deleted')return;
+    if(q&&!JSON.stringify(vm).toLowerCase().includes(q))return;
+    if(rg&&vm.rg!==rg)return;
+    n++;
+    const tr=document.createElement('tr');
+    tr.dataset.id=vm.id;
+    if(selId===vm.id)tr.classList.add('sel-row');
+    tr.innerHTML=`<td style="width:36px"><input type="checkbox" class="rcb" ${selId===vm.id?'checked':''}></td><td><span class="vm-link">${vm.name}</span></td><td>Virtual machine</td><td>${stHtml(vm.state)}</td><td><span class="rg-link">${vm.rg}</span></td><td>${vm.loc}</td><td>Pay-As-You-Go</td><td>${vm.size}</td>`;
+    tr.addEventListener('click',()=>selVM(vm.id));
+    b.appendChild(tr);
+  });
+  document.getElementById('vmCount').textContent=`${n} virtual machine${n!==1?'s':''}`;
+}
+
+function selVM(id){selId=selId===id?null:id;renderTable();if(selId)openBlade(selId);else closeBlade();}
+function toggleAll(cb){document.querySelectorAll('.rcb').forEach(c=>c.checked=cb.checked);selId=null;renderTable();closeBlade();}
+
+function openBlade(id){
+  const vm=vms.find(v=>v.id===id);if(!vm)return;
+  document.getElementById('bladeTitle').textContent=vm.name;
+  document.getElementById('bladeSub').textContent=`${vm.rg} | ${vm.loc} | ${vm.size}`;
+  document.getElementById('bladeStatus').innerHTML=stHtml(vm.state)+`<span style="font-size:12px;color:#605e5c;margin-left:10px">Public IP: ${vm.ip}</span>`;
+  document.getElementById('bladePanel').classList.add('open');
+  renderBlade('ov',vm);
+}
+function closeBlade(){document.getElementById('bladePanel').classList.remove('open');}
+function bladeTab(el,tab){document.querySelectorAll('.blade-tab').forEach(t=>t.classList.remove('active'));el.classList.add('active');const vm=vms.find(v=>v.id===selId);if(vm)renderBlade(tab,vm);}
+
+function renderBlade(tab,vm){
+  const b=document.getElementById('bladeBody');
+  if(tab==='ov')b.innerHTML=`<div class="b-sec">Properties</div><div class="b-row"><span class="b-key">Resource group</span><span class="b-val" style="color:#0078d4">${vm.rg}</span></div><div class="b-row"><span class="b-key">Status</span><span class="b-val">${stHtml(vm.state)}</span></div><div class="b-row"><span class="b-key">Location</span><span class="b-val">${vm.loc}</span></div><div class="b-row"><span class="b-key">Size</span><span class="b-val">${vm.size}</span></div><div class="b-row"><span class="b-key">Public IP</span><span class="b-val" style="color:#0078d4">${vm.ip}</span></div><div class="b-row"><span class="b-key">Operating system</span><span class="b-val">${vm.os}</span></div><div class="b-row"><span class="b-key">Created</span><span class="b-val">${vm.launched}</span></div>`;
+  else if(tab==='net')b.innerHTML=`<div class="b-sec">Network interface</div><div class="b-row"><span class="b-key">Virtual network</span><span class="b-val" style="color:#0078d4">vnet-production</span></div><div class="b-row"><span class="b-key">Subnet</span><span class="b-val" style="color:#0078d4">default (10.0.0.0/24)</span></div><div class="b-row"><span class="b-key">Public IP</span><span class="b-val">${vm.ip}</span></div><div class="b-row"><span class="b-key">Private IP</span><span class="b-val">10.0.0.${Math.floor(Math.random()*200+10)}</span></div><div class="b-sec" style="margin-top:12px">Inbound port rules</div><div class="b-row"><span class="b-key">SSH (22)</span><span class="b-val">Allow any source</span></div><div class="b-row"><span class="b-key">HTTP (80)</span><span class="b-val">Allow any source</span></div>`;
+  else if(tab==='disks')b.innerHTML=`<div class="b-sec">OS Disk</div><div class="b-row"><span class="b-key">Name</span><span class="b-val" style="color:#0078d4">${vm.name}-osDisk</span></div><div class="b-row"><span class="b-key">Type</span><span class="b-val">Premium SSD LRS</span></div><div class="b-row"><span class="b-key">Size</span><span class="b-val">30 GiB</span></div><div class="b-row"><span class="b-key">Encryption</span><span class="b-val">Platform-managed key</span></div>`;
+  else if(tab==='mon'){const r=()=>Math.floor(Math.random()*50+5);b.innerHTML=`<div class="b-sec">Metrics (last hour)</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:8px">${[['CPU %',r()+'%'],['Available memory',(Math.random()*2+1).toFixed(1)+' GiB'],['Network in',Math.floor(Math.random()*500)+' Kbps'],['Network out',Math.floor(Math.random()*200)+' Kbps'],['Disk reads/s',r()+''],['Disk writes/s',Math.floor(Math.random()*50)+'']].map(([k,v])=>`<div style="background:#f8f8f8;border:1px solid #edebe9;border-radius:2px;padding:10px"><div style="font-size:12px;color:#605e5c;margin-bottom:4px">${k}</div><div style="font-size:18px;font-weight:700">${v}</div></div>`).join('')}</div>`;}
+}
+
+function vmAction(action){
+  closeM('delModal');
+  const vm=vms.find(v=>v.id===selId);if(!vm)return;
+  const m={
+    start:{tr:'starting',fn:'running',d:3500,ok:`${vm.name} started successfully.`},
+    stop:{tr:'stopping',fn:'stopped',d:3000,ok:`${vm.name} stopped.`},
+    deallocate:{tr:'stopping',fn:'deallocated',d:3500,ok:`${vm.name} deallocated.`},
+    restart:{tr:'restarting',fn:'running',d:4000,ok:`${vm.name} restarted.`},
+    delete:{tr:'deleting',fn:'deleted',d:4000,ok:`${vm.name} deleted successfully.`},
+  };
+  const t=m[action];if(!t)return;
+  toast('info','Processing',`${t.tr.charAt(0).toUpperCase()+t.tr.slice(1)} ${vm.name}...`);
+  vm.state=t.tr;
+  if(['stop','deallocate','delete'].includes(action))vm.ip='—';
+  renderTable();if(selId)openBlade(selId);
+  setTimeout(()=>{
+    vm.state=t.fn;
+    if(['start','restart'].includes(action)){
+      const ip=`${40+Math.floor(Math.random()*50)}.${Math.floor(Math.random()*200+50)}.${Math.floor(Math.random()*200+50)}.${Math.floor(Math.random()*200+50)}`;
+      vm.ip=ip;
+    }
+    if(action==='delete'){selId=null;closeBlade();}
+    toast('success','Complete',t.ok);
+    renderTable();if(selId)openBlade(selId);
+  },t.d);
+}
+
+function openDelModal(){document.getElementById('delModal').classList.add('on');document.getElementById('delInp').value='';document.getElementById('delBtn').disabled=true;}
+function closeM(id){document.getElementById(id).classList.remove('on');}
+function chkDel(el){document.getElementById('delBtn').disabled=el.value.trim().toLowerCase()!=='yes';}
+
+function openConn(){
+  const vm=vms.find(v=>v.id===selId);
+  if(!vm||vm.state!=='running'){toast('warning','Cannot connect','VM must be in Running state to connect.');return;}
+  document.getElementById('connIP').value=vm.ip;
+  document.getElementById('termHost').textContent=vm.ip;
+  document.getElementById('termArea').style.display='none';
+  document.getElementById('connBtn').style.display='';
+  document.getElementById('connModal').classList.add('on');
+}
+function swConnTab(id){document.querySelectorAll('[id^=ct]').forEach(t=>{t.style.borderBottomColor='transparent';t.style.color='#605e5c';t.style.fontWeight='400';});const el=document.getElementById(id);if(el){el.style.borderBottomColor='#0078d4';el.style.color='#0078d4';el.style.fontWeight='600';}}
+function simulateSSH(){
+  const vm=vms.find(v=>v.id===selId);
+  document.getElementById('termArea').style.display='block';
+  document.getElementById('connBtn').style.display='none';
+  const b=document.getElementById('termBody');b.innerHTML='';
+  const lines=[
+    {d:0,h:`<div class="t-out">Connecting to ${vm.ip}:22...</div>`},
+    {d:800,h:`<div class="t-out">Warning: Permanently added '${vm.ip}' to the list of known hosts.</div>`},
+    {d:1600,h:`<div style="color:#fff;margin:6px 0">Welcome to Ubuntu 22.04.3 LTS (GNU/Linux 6.2.0-1018-azure x86_64)<br></div>`},
+    {d:2000,h:`<div class="t-out">System information as of ${new Date().toUTCString()}</div>`},
+    {d:2400,h:`<div class="t-out">Memory usage: 18%   Processes: 108   Users logged in: 0</div>`},
+    {d:2800,h:`<div><span class="t-prompt">azureuser@${vm.name}:~$</span> <span class="t-cursor"></span></div>`},
+  ];
+  lines.forEach(l=>setTimeout(()=>{b.innerHTML+=l.h;b.scrollTop=b.scrollHeight;},l.d));
+}
+
+function toast(type,title,msg){
+  const icons={success:'✅',info:'ℹ️',warning:'⚠️',error:'❌'};
+  const d=document.createElement('div');
+  d.className=`toast ${type}`;
+  d.innerHTML=`<div class="t-ico">${icons[type]}</div><div><div class="t-title">${title}</div><div class="t-msg">${msg}</div></div><div class="t-x" onclick="this.parentElement.remove()">✕</div>`;
+  document.getElementById('toasts').appendChild(d);
+  setTimeout(()=>{d.style.animation='fadeOut .4s ease forwards';setTimeout(()=>d.remove(),400);},5000);
+}
+
+/* WIZARD */
+const wzContent={
+  1:()=>`<div class="f-sec"><div class="f-sec-title">Project details</div><div class="f-sec-desc">Select subscription and resource group.</div><div class="f-row"><div><label class="f-label">Subscription <span class="f-req">*</span></label><select class="f-fsel"><option>Pay-As-You-Go</option></select></div><div><label class="f-label">Resource group <span class="f-req">*</span></label><select class="f-fsel" onchange="cfg.rg=this.value"><option>therebeladmin</option><option>rg-production</option><option>rg-development</option></select></div></div></div>
+  <div class="f-sec"><div class="f-sec-title">Instance details</div><div class="f-row f-full"><div><label class="f-label">Virtual machine name <span class="f-req">*</span></label><input class="f-inp" id="vmNm" placeholder="my-vm" value="${cfg.name}" oninput="cfg.name=this.value;updCost()" style="max-width:280px"><div class="f-hint">1–64 chars: letters, numbers, hyphens</div></div></div>
+  <div class="f-row"><div><label class="f-label">Region <span class="f-req">*</span></label><select class="f-fsel"><option>(US) East US</option><option>(US) West US 2</option><option>(Europe) West Europe</option></select></div><div><label class="f-label">Availability options</label><select class="f-fsel"><option>No infrastructure redundancy required</option></select></div></div>
+  <div class="f-row f-full"><div><label class="f-label">Image <span class="f-req">*</span></label><div class="img-grid" style="margin-top:6px">
+    ${[['ubuntu','🟠','Ubuntu Server 22.04 LTS','Gen2',true],['windows','🪟','Windows Server 2022','Gen2',false],['redhat','🎩','Red Hat Enterprise Linux 9','Gen2',false],['debian','🐧','Debian 12 "Bookworm"','Gen2',true]].map(([id,ico,name,gen,free])=>`<div class="img-card ${cfg.img===id?'sel':''}" onclick="cfg.img='${id}';cfg.imgName=imgMap['${id}'].n;renderWzStep()"><div class="img-ico">${ico}</div><div><div class="img-name">${name}</div><div class="img-sub">${gen} ${free?'<span class="badge-free">Free</span>':''}</div></div></div>`).join('')}
+  </div></div></div>
+  <div class="f-row f-full"><div><label class="f-label">Size <span class="f-req">*</span></label><div class="sz-table" style="margin-top:6px"><table>
+    <tr><th></th><th>Size</th><th>vCPUs</th><th>RAM</th><th>Cost/month</th></tr>
+    ${[['Standard_B1s','1','1 GiB','~$14.60'],['Standard_B2s','2','4 GiB','~$29.20'],['Standard_D2s_v5','2','8 GiB','~$96.36'],['Standard_D4s_v5','4','16 GiB','~$192.72'],['Standard_E4s_v5','4','32 GiB','~$252.00']].map(([id,vcpu,ram,cost])=>`<tr class="${cfg.size===id?'sel':''}" onclick="cfg.size='${id}';updCost();renderWzStep()"><td><input type="radio" name="sz" ${cfg.size===id?'checked':''}></td><td><strong>${id}</strong></td><td>${vcpu}</td><td>${ram}</td><td>${cost}</td></tr>`).join('')}
+  </table></div></div></div></div>
+  <div class="f-sec"><div class="f-sec-title">Administrator account</div>
+  <div class="f-row"><div><label class="f-label">Authentication type</label><div style="display:flex;gap:12px;margin-top:4px"><label style="display:flex;align-items:center;gap:5px;cursor:pointer;font-size:13px"><input type="radio" name="auth" ${cfg.auth==='password'?'checked':''} onchange="cfg.auth='password';renderWzStep()"> Password</label><label style="display:flex;align-items:center;gap:5px;cursor:pointer;font-size:13px"><input type="radio" name="auth" ${cfg.auth==='ssh'?'checked':''} onchange="cfg.auth='ssh';renderWzStep()"> SSH public key</label></div></div>
+  <div><label class="f-label">Username <span class="f-req">*</span></label><input class="f-inp" value="${cfg.user}" oninput="cfg.user=this.value"></div></div>
+  ${cfg.auth==='password'?`<div class="f-row"><div><label class="f-label">Password <span class="f-req">*</span></label><input class="f-inp" type="password" placeholder="•••••••••••••"></div><div><label class="f-label">Confirm password</label><input class="f-inp" type="password" placeholder="•••••••••••••"></div></div>`:`<div class="f-row"><div><label class="f-label">SSH public key source</label><select class="f-fsel"><option>Generate new key pair</option><option>Use existing key</option></select></div><div><label class="f-label">Key pair name</label><input class="f-inp" value="${(cfg.name||'myvm').replace(/[^a-z0-9]/gi,'-')}-key"></div></div>`}
+  <div class="f-row"><div><label class="f-label">Public inbound ports</label><div style="display:flex;gap:12px;margin-top:4px"><label style="display:flex;align-items:center;gap:5px;cursor:pointer;font-size:13px"><input type="radio" name="ports" checked> Allow selected ports</label><label style="display:flex;align-items:center;gap:5px;cursor:pointer;font-size:13px"><input type="radio" name="ports"> None</label></div></div>
+  <div><label class="f-label">Select ports</label><select class="f-fsel" multiple style="height:65px;padding:3px"><option selected>SSH (22)</option><option>HTTP (80)</option><option>HTTPS (443)</option><option>RDP (3389)</option></select></div></div></div>`,
+
+  2:()=>`<div class="f-sec"><div class="f-sec-title">Disk options</div><div class="f-row"><div><label class="f-label">OS disk type</label><select class="f-fsel"><option>Premium SSD (locally-redundant storage)</option><option>Standard SSD</option><option>Standard HDD</option></select></div><div><label class="f-label">OS disk size</label><select class="f-fsel"><option>Image default (30 GiB)</option><option>64 GiB</option><option>128 GiB</option></select></div></div></div><div class="f-sec"><div class="f-sec-title">Data disks</div><div style="font-size:13px;color:#605e5c;padding:16px;border:1px solid #edebe9;text-align:center">No data disks attached</div><div style="margin-top:8px;display:flex;gap:8px"><button class="az-btn btn-sec" style="font-size:12px">Create and attach new disk</button><button class="az-btn btn-sec" style="font-size:12px">Attach existing disk</button></div></div>`,
+
+  3:()=>`<div class="f-sec"><div class="f-sec-title">Network interface</div><div class="f-row"><div><label class="f-label">Virtual network <span class="f-req">*</span></label><select class="f-fsel"><option>vnet-production</option><option>(New) Create new</option></select></div><div><label class="f-label">Subnet <span class="f-req">*</span></label><select class="f-fsel"><option>default (10.0.0.0/24)</option></select></div></div><div class="f-row"><div><label class="f-label">Public IP</label><select class="f-fsel"><option>(New) ${cfg.name||'myvm'}-ip</option><option>None</option></select></div><div><label class="f-label">NIC security group</label><div style="display:flex;gap:12px;margin-top:4px"><label style="display:flex;align-items:center;gap:5px;cursor:pointer;font-size:13px"><input type="radio" name="nsg" checked> Basic</label><label style="display:flex;align-items:center;gap:5px;cursor:pointer;font-size:13px"><input type="radio" name="nsg"> Advanced</label></div></div></div></div>`,
+
+  4:()=>`<div class="f-sec"><div class="f-sec-title">Monitoring</div><div class="f-row"><div><label class="f-label">Boot diagnostics</label><select class="f-fsel"><option>Enable with managed storage account (recommended)</option><option>Disable</option></select></div><div><label class="f-label">OS guest diagnostics</label><select class="f-fsel"><option>Off</option><option>On</option></select></div></div></div><div class="f-sec"><div class="f-sec-title">Auto-shutdown</div><div class="f-row"><div><label class="f-label">Enable auto-shutdown</label><select class="f-fsel"><option>Off</option><option>On</option></select></div></div></div><div class="f-sec"><div class="f-sec-title">Backup</div><div class="f-row"><div><label class="f-label">Enable backup</label><select class="f-fsel"><option>Off</option><option>On</option></select></div></div></div>`,
+
+  5:()=>`<div class="f-sec"><div class="f-sec-title">Tags</div><div class="f-sec-desc">Name/value pairs to categorize resources and manage costs.</div><div style="display:grid;grid-template-columns:1fr 1fr auto;gap:8px;margin-bottom:6px;font-size:12px;font-weight:700;color:#605e5c"><span>Name</span><span>Value</span><span></span></div>${[['environment','production'],['owner',cfg.user||'azureuser'],['project','sistemas-operativos-ii']].map(([k,v])=>`<div style="display:grid;grid-template-columns:1fr 1fr auto;gap:8px;margin-bottom:6px;align-items:center"><input class="f-inp" value="${k}"><input class="f-inp" value="${v}"><span style="cursor:pointer;color:#d13212">🗑</span></div>`).join('')}<button class="az-btn btn-sec" style="font-size:12px;margin-top:4px">+ Add tag</button></div>`,
+
+  6:()=>`<div style="background:#dff6dd;border:1px solid #107c10;border-radius:2px;padding:10px 14px;margin-bottom:16px;font-size:13px;display:flex;gap:8px">✅ <span><strong>Validation passed.</strong> Review the configuration below.</span></div>
+  <div class="f-sec"><div class="f-sec-title">Basics</div><table style="width:100%;border-collapse:collapse">${[['Subscription','Pay-As-You-Go'],['Resource group',cfg.rg],['Name',cfg.name||'(not set)'],['Region',cfg.loc],['Image',cfg.imgName],['Size',cfg.size],['Auth type',cfg.auth==='ssh'?'SSH public key':'Password'],['Username',cfg.user]].map(([k,v])=>`<tr style="border-bottom:1px solid #f3f2f1"><td style="padding:7px 10px;color:#605e5c;font-size:13px;width:160px">${k}</td><td style="padding:7px 10px;font-size:13px;font-weight:500">${v}</td></tr>`).join('')}</table></div>
+  <div style="background:#eff6fc;border:1px solid #0078d4;border-radius:2px;padding:14px 18px;display:flex;align-items:center;justify-content:space-between">
+    <div><div style="font-weight:700;font-size:14px">Estimated monthly cost</div><div style="font-size:13px;color:#605e5c;margin-top:2px">${costs[cfg.size]||'~$14.60'} USD · Per minute billing</div></div>
+    <button class="az-btn btn-primary" style="padding:9px 28px;font-size:15px" onclick="createVM()">Create</button>
+  </div>`
+};
+
+function updCost(){const e=document.getElementById('wzCost');if(e)e.textContent=(costs[cfg.size]||'~$14.60')+' USD';}
+function renderWzStep(){
+  document.getElementById('wzBody').innerHTML=wzContent[wzStep]();
+  for(let i=1;i<=6;i++){const e=document.getElementById('ws'+i);if(e)e.className='wz-step'+(i===wzStep?' active':i<wzStep?' done':'');}
+  document.getElementById('wzPrev').style.display=wzStep>1?'':'none';
+  document.getElementById('wzFwd').textContent=['Next: Disks ›','Next: Networking ›','Next: Management ›','Next: Tags ›','Next: Review + create ›','Create'][wzStep-1];
+  updCost();
+}
+function wzFwd(){if(wzStep===6){createVM();return;}wzStep++;renderWzStep();}
+function wzBack(){if(wzStep>1){wzStep--;renderWzStep();}}
+function goWS(n){wzStep=n;renderWzStep();}
+
+function openWizard(){wzStep=1;cfg={name:'',rg:'therebeladmin',loc:'East US',img:'ubuntu',imgName:'Ubuntu Server 22.04 LTS',size:'Standard_B1s',auth:'password',user:'azureuser'};document.getElementById('wzOl').classList.add('on');document.getElementById('wzFoot').style.display='flex';document.getElementById('wzSteps').style.display='flex';document.getElementById('wzFwd').style.display='';renderWzStep();}
+function closeWizard(){document.getElementById('wzOl').classList.remove('on');}
+
+function createVM(){
+  document.getElementById('wzBody').innerHTML=`<div class="deploy-screen"><div class="az-spin"></div><div style="font-size:20px;font-weight:600;margin-bottom:6px">Deploying virtual machine...</div><div style="font-size:13px;color:#605e5c;margin-bottom:20px">This usually takes 1–2 minutes.</div>${['Validating template','Creating resource group resources','Provisioning network interface','Allocating public IP address','Creating virtual machine','Applying extensions & configurations','Deployment complete'].map((s,i)=>`<div class="dep-step"><div class="dep-dot" id="dd${i}"></div><span>${s}</span></div>`).join('')}</div>`;
+  document.getElementById('wzFoot').style.display='none';
+  document.getElementById('wzSteps').style.display='none';
+  let step=0;
+  const iv=setInterval(()=>{
+    if(step>0){const p=document.getElementById('dd'+(step-1));if(p){p.className='dep-dot done';p.textContent='✓';}}
+    const cur=document.getElementById('dd'+step);
+    if(cur&&step<7){cur.className='dep-dot active';step++;}
+    else if(step>=7){clearInterval(iv);finishVM();}
+  },600);
+}
+function finishVM(){
+  const name=cfg.name||'my-new-vm';
+  const im=imgMap[cfg.img]||imgMap.ubuntu;
+  const ip=`${40+Math.floor(Math.random()*50)}.${Math.floor(Math.random()*200+50)}.${Math.floor(Math.random()*200+50)}.${Math.floor(Math.random()*200+50)}`;
+  const nvm={id:'vm-new-'+Date.now(),name,state:'creating',rg:cfg.rg,loc:cfg.loc,size:cfg.size,os:im.os,ip:'—',launched:new Date().toISOString().split('T')[0]};
+  vms.unshift(nvm);
+  closeWizard();
+  renderTable();
+  document.getElementById('sucText').textContent=`Virtual machine ${name} was created successfully.`;
+  document.getElementById('sucBar').style.display='flex';
+  toast('info','Deployment','VM is being provisioned...');
+  setTimeout(()=>{nvm.state='starting';renderTable();},1500);
+  setTimeout(()=>{nvm.state='running';nvm.ip=ip;selId=nvm.id;renderTable();openBlade(nvm.id);toast('success','VM running',`${name} is running. IP: ${ip}`);},4500);
+}
+
+renderTable();
+</script>
+</body></html>

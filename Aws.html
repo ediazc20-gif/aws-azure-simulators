@@ -1,0 +1,663 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>EC2 Management Console</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:"Amazon Ember","Helvetica Neue",Arial,sans-serif;font-size:14px;background:#f2f3f3;color:#16191f;}
+.topnav{background:#232f3e;height:48px;display:flex;align-items:center;padding:0 10px;gap:6px;position:sticky;top:0;z-index:200;}
+.tn-logo{color:#ff9900;font-size:22px;font-weight:900;padding:0 10px;}
+.tn-btn{height:48px;padding:0 12px;display:flex;align-items:center;color:#d5dbdb;font-size:13px;cursor:pointer;border-bottom:2px solid transparent;}
+.tn-btn:hover{border-bottom-color:#ff9900;}
+.tn-search{flex:1;max-width:480px;display:flex;align-items:center;background:#3a4553;border:1px solid #57697a;border-radius:4px;height:30px;padding:0 10px;gap:8px;margin:0 12px;}
+.tn-search input{background:transparent;border:none;outline:none;color:#d5dbdb;font-size:13px;width:100%;}
+.tn-search input::placeholder{color:#8a9ba8;}
+.tn-right{margin-left:auto;display:flex;align-items:center;}
+.tn-region,.tn-account{height:48px;padding:0 10px;display:flex;align-items:center;color:#d5dbdb;font-size:12px;cursor:pointer;}
+.tn-region:hover,.tn-account:hover{background:#37475a;}
+.breadcrumb{background:#fff;border-bottom:1px solid #d5dbdb;padding:0 20px;height:34px;display:flex;align-items:center;gap:6px;font-size:13px;}
+.bc-link{color:#0073bb;cursor:pointer;}
+.bc-link:hover{text-decoration:underline;}
+.layout{display:flex;height:calc(100vh - 82px);overflow:hidden;}
+.sidebar{width:200px;background:#fff;border-right:1px solid #d5dbdb;overflow-y:auto;flex-shrink:0;}
+.sb-group{padding:6px 16px 2px;font-size:11px;font-weight:700;color:#545b64;text-transform:uppercase;}
+.sb-item{padding:6px 16px 6px 22px;font-size:13px;cursor:pointer;border-left:3px solid transparent;}
+.sb-item:hover{background:#f2f8ff;color:#0073bb;}
+.sb-item.active{background:#f2f8ff;color:#0073bb;font-weight:600;border-left-color:#ff9900;}
+.sb-head{padding:7px 16px;font-size:13px;font-weight:700;cursor:pointer;}
+.sb-head:hover{background:#f2f3f3;}
+.main{flex:1;overflow-y:auto;display:flex;flex-direction:column;}
+.page-header{padding:14px 20px 0;display:flex;align-items:center;gap:10px;}
+.page-title{font-size:20px;font-weight:700;}
+.page-actions{margin-left:auto;display:flex;gap:8px;}
+.btn{padding:5px 14px;border-radius:2px;font-size:13px;font-weight:600;cursor:pointer;border:none;display:flex;align-items:center;gap:5px;}
+.btn-primary{background:#ec7211;color:#fff;}
+.btn-primary:hover{background:#d45b00;}
+.btn-secondary{background:#fff;border:1px solid #aab7b8;color:#16191f;}
+.btn-secondary:hover{background:#fafafa;}
+.btn-danger{background:#d13212;color:#fff;}
+.toolbar{padding:10px 20px;display:flex;align-items:center;gap:6px;flex-wrap:wrap;border-bottom:1px solid #eaeded;}
+.tb-btn{padding:5px 12px;border:1px solid #aab7b8;border-radius:2px;background:#fff;font-size:13px;font-weight:600;cursor:pointer;}
+.tb-btn:hover{background:#f2f8ff;border-color:#0073bb;color:#0073bb;}
+.tb-btn.danger-btn:hover{background:#fff5f5;border-color:#d13212;color:#d13212;}
+.filters{padding:8px 20px;display:flex;gap:8px;}
+.filter-box{display:flex;align-items:center;border:1px solid #aab7b8;border-radius:2px;background:#fff;height:30px;padding:0 8px;gap:6px;flex:1;max-width:380px;}
+.filter-box input{border:none;outline:none;font-size:13px;width:100%;}
+.table-area{display:flex;flex:1;overflow:hidden;}
+.table-wrap{flex:1;overflow:auto;}
+table{width:100%;border-collapse:collapse;min-width:800px;}
+thead th{background:#fafafa;border-bottom:2px solid #eaeded;padding:9px 14px;text-align:left;font-size:12px;font-weight:700;color:#545b64;white-space:nowrap;cursor:pointer;}
+thead th:hover{background:#f2f3f3;}
+tbody tr{border-bottom:1px solid #f2f3f3;cursor:pointer;transition:background .1s;}
+tbody tr:hover{background:#f2f8ff;}
+tbody tr.sel-row{background:#fff8f0;border-left:3px solid #ec7211;}
+tbody td{padding:9px 14px;font-size:13px;vertical-align:middle;}
+.link{color:#0073bb;cursor:pointer;}
+.link:hover{text-decoration:underline;}
+.status{display:inline-flex;align-items:center;gap:6px;font-weight:600;}
+.status-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0;}
+.s-running{color:#1d8102;} .s-running .status-dot{background:#1d8102;}
+.s-stopped{color:#d13212;} .s-stopped .status-dot{background:#d13212;}
+.s-pending{color:#b45309;} .s-pending .status-dot{background:#ff9900;animation:blink 1s infinite;}
+.s-stopping{color:#b45309;} .s-stopping .status-dot{background:#f5a623;animation:blink .8s infinite;}
+.s-terminated{color:#687078;} .s-terminated .status-dot{background:#687078;}
+.s-rebooting{color:#0073bb;} .s-rebooting .status-dot{background:#0073bb;animation:blink .6s infinite;}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.25}}
+/* DETAIL */
+.detail{width:0;background:#fff;border-left:1px solid #d5dbdb;transition:width .3s;flex-shrink:0;display:flex;flex-direction:column;overflow:hidden;}
+.detail.open{width:400px;}
+.d-header{padding:12px 16px;border-bottom:1px solid #eaeded;background:#fafafa;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;}
+.d-title{font-size:15px;font-weight:700;}
+.d-close{cursor:pointer;color:#687078;font-size:18px;}
+.d-close:hover{color:#16191f;}
+.d-tabs{display:flex;border-bottom:1px solid #eaeded;flex-shrink:0;}
+.d-tab{padding:8px 12px;font-size:12px;color:#687078;cursor:pointer;border-bottom:2px solid transparent;}
+.d-tab.active{color:#ec7211;border-bottom-color:#ec7211;font-weight:600;}
+.d-body{flex:1;overflow-y:auto;padding:14px;}
+.d-row{display:flex;margin-bottom:7px;gap:8px;font-size:13px;}
+.d-key{color:#687078;min-width:130px;font-weight:600;flex-shrink:0;}
+.d-actions{padding:10px 14px;border-top:1px solid #eaeded;display:flex;gap:6px;flex-wrap:wrap;flex-shrink:0;}
+/* TOASTS */
+.toasts{position:fixed;top:58px;right:16px;z-index:9999;display:flex;flex-direction:column;gap:8px;}
+.toast{background:#fff;border:1px solid #d5dbdb;border-radius:4px;padding:10px 14px;max-width:360px;box-shadow:0 4px 16px rgba(0,0,0,.15);display:flex;gap:10px;align-items:flex-start;animation:slideIn .3s ease;}
+.toast.success{border-left:4px solid #1d8102;}
+.toast.info{border-left:4px solid #0073bb;}
+.toast.warning{border-left:4px solid #ff9900;}
+.toast.error{border-left:4px solid #d13212;}
+.t-ico{font-size:16px;flex-shrink:0;}
+.t-title{font-weight:700;font-size:13px;margin-bottom:2px;}
+.t-msg{font-size:12px;color:#545b64;}
+.t-x{margin-left:auto;cursor:pointer;color:#687078;font-size:14px;}
+@keyframes slideIn{from{opacity:0;transform:translateX(20px)}to{opacity:1;transform:translateX(0)}}
+@keyframes fadeOut{to{opacity:0;transform:translateX(20px)}}
+/* MODALS */
+.overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:400;align-items:center;justify-content:center;}
+.overlay.on{display:flex;}
+.modal{background:#fff;border-radius:4px;max-width:500px;width:90%;box-shadow:0 8px 32px rgba(0,0,0,.3);animation:popIn .2s ease;}
+@keyframes popIn{from{opacity:0;transform:scale(.97)}to{opacity:1;transform:scale(1)}}
+.m-head{padding:14px 20px;border-bottom:1px solid #eaeded;display:flex;align-items:center;justify-content:space-between;}
+.m-title{font-size:15px;font-weight:700;}
+.m-close{cursor:pointer;color:#687078;font-size:18px;}
+.m-body{padding:18px 20px;}
+.m-foot{padding:12px 20px;border-top:1px solid #eaeded;display:flex;justify-content:flex-end;gap:8px;}
+.danger-box{background:#fff5f5;border:1px solid #d13212;border-radius:4px;padding:10px 14px;margin-bottom:14px;font-size:13px;display:flex;gap:8px;}
+.warn-box{background:#fff8f0;border:1px solid #ff9900;border-radius:4px;padding:10px 14px;margin-bottom:14px;font-size:13px;display:flex;gap:8px;}
+.m-input{width:100%;border:1px solid #aab7b8;border-radius:2px;padding:6px 10px;font-size:13px;outline:none;margin-top:6px;}
+.m-input:focus{border-color:#0073bb;}
+/* WIZARD */
+.wz-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:300;overflow-y:auto;}
+.wz-overlay.on{display:block;}
+.wz-wrap{min-height:100%;display:flex;align-items:flex-start;justify-content:center;padding:20px;}
+.wizard{background:#fff;width:940px;max-width:100%;border-radius:4px;box-shadow:0 8px 32px rgba(0,0,0,.3);}
+.wz-hdr{background:#232f3e;padding:14px 22px;border-radius:4px 4px 0 0;display:flex;align-items:center;justify-content:space-between;}
+.wz-title{color:#fff;font-size:17px;font-weight:700;}
+.wz-x{color:#aab7b8;cursor:pointer;font-size:22px;}
+.wz-x:hover{color:#fff;}
+.wz-steps{display:flex;background:#f2f3f3;border-bottom:1px solid #d5dbdb;overflow-x:auto;}
+.wz-step{padding:10px 14px;font-size:12px;font-weight:600;color:#687078;cursor:pointer;border-bottom:3px solid transparent;display:flex;align-items:center;gap:5px;white-space:nowrap;}
+.wz-step.active{color:#ec7211;border-bottom-color:#ec7211;background:#fff;}
+.wz-step.done{color:#1d8102;}
+.wz-num{width:18px;height:18px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;background:#aab7b8;color:#fff;}
+.wz-step.active .wz-num{background:#ec7211;}
+.wz-step.done .wz-num{background:#1d8102;}
+.wz-content{display:flex;}
+.wz-main{flex:1;padding:22px;}
+.wz-side{width:240px;border-left:1px solid #eaeded;padding:18px;background:#fafafa;flex-shrink:0;}
+.wz-foot{padding:12px 22px;border-top:1px solid #eaeded;display:flex;align-items:center;justify-content:space-between;background:#fafafa;}
+.field{margin-bottom:18px;}
+.f-label{font-size:13px;font-weight:700;margin-bottom:5px;display:flex;align-items:center;gap:6px;}
+.f-hint{font-size:12px;color:#687078;margin-top:4px;}
+.f-inp{width:100%;border:1px solid #aab7b8;border-radius:2px;padding:7px 10px;font-size:13px;outline:none;}
+.f-inp:focus{border-color:#0073bb;box-shadow:0 0 0 2px rgba(0,115,187,.1);}
+.f-sel{width:100%;border:1px solid #aab7b8;border-radius:2px;padding:7px 10px;font-size:13px;outline:none;background:#fff;}
+.s-title{font-size:15px;font-weight:700;margin-bottom:4px;}
+.s-desc{font-size:13px;color:#545b64;margin-bottom:16px;line-height:1.5;}
+.badge-free{background:#f2f8f0;color:#1d8102;border:1px solid #1d8102;border-radius:10px;padding:1px 8px;font-size:11px;}
+.badge-arch{background:#e8f4fb;color:#0073bb;border:1px solid #00a1c9;border-radius:10px;padding:1px 8px;font-size:11px;}
+/* AMI ICONS */
+.ami-grid{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px;}
+.ami-ico{border:2px solid #d5dbdb;border-radius:4px;padding:8px 10px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:4px;min-width:80px;transition:all .15s;}
+.ami-ico:hover{border-color:#0073bb;background:#f2f8ff;}
+.ami-ico.sel{border-color:#ec7211;background:#fff8f0;}
+.ami-ico-lbl{font-size:11px;font-weight:700;line-height:1.2;text-align:center;}
+/* INSTANCE TYPE */
+.it-table{width:100%;border-collapse:collapse;border:1px solid #d5dbdb;}
+.it-table th{background:#fafafa;padding:7px 10px;font-size:12px;font-weight:700;color:#545b64;text-align:left;border-bottom:1px solid #eaeded;}
+.it-table tr{border-bottom:1px solid #f2f3f3;cursor:pointer;}
+.it-table tr:hover{background:#f2f8ff;}
+.it-table tr.sel td:first-child{border-left:3px solid #ec7211;}
+.it-table tr.sel{background:#fff8f0;}
+.it-table td{padding:7px 10px;font-size:13px;}
+/* LAUNCH PROGRESS */
+.launch-screen{padding:36px 24px;text-align:center;}
+.l-spin{width:50px;height:50px;border:4px solid #f2f3f3;border-top-color:#ec7211;border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 18px;}
+@keyframes spin{to{transform:rotate(360deg)}}
+.l-step{display:flex;align-items:center;gap:10px;padding:6px 0;font-size:13px;max-width:360px;margin:0 auto;text-align:left;}
+.l-dot{width:18px;height:18px;border-radius:50%;border:2px solid #d5dbdb;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:10px;background:#fff;transition:all .3s;}
+.l-dot.active{border-color:#ec7211;border-width:3px;}
+.l-dot.done{background:#1d8102;border-color:#1d8102;color:#fff;}
+.prog-bar{height:4px;background:#eaeded;border-radius:2px;overflow:hidden;margin:12px auto;max-width:360px;}
+.prog-fill{height:100%;background:#ec7211;border-radius:2px;transition:width .5s;}
+/* TERMINAL */
+.term-wrap{margin-top:12px;}
+.term-hdr{background:#1e1e1e;border-radius:4px 4px 0 0;padding:8px 12px;display:flex;align-items:center;gap:6px;}
+.t-dot{width:12px;height:12px;border-radius:50%;}
+.t-red{background:#ff5f56;} .t-yellow{background:#ffbd2e;} .t-green{background:#27c93f;}
+.term-ttl{flex:1;text-align:center;font-size:11px;color:#999;}
+.terminal{background:#1e1e1e;border-radius:0 0 4px 4px;padding:14px;font-family:'Courier New',monospace;font-size:13px;color:#d4d4d4;min-height:180px;}
+.t-out{color:#9cdcfe;} .t-ok{color:#4ec9b0;} .t-prompt{color:#4ec9b0;}
+.t-cursor{display:inline-block;width:8px;height:13px;background:#d4d4d4;animation:blink2 1s infinite;vertical-align:middle;}
+@keyframes blink2{0%,100%{opacity:1}50%{opacity:0}}
+/* SUCCESS */
+.success-bar{background:#f2f8f0;border:1px solid #1d8102;border-radius:4px;padding:12px 16px;margin:10px 20px;display:flex;align-items:flex-start;gap:10px;animation:slideIn .3s ease;}
+.sb-icon{color:#1d8102;font-size:18px;flex-shrink:0;}
+.sb-title{font-weight:700;color:#1d8102;font-size:13px;}
+.sb-x{margin-left:auto;cursor:pointer;color:#687078;}
+/* STATE DROPDOWN */
+.state-menu{display:none;position:absolute;top:100%;right:0;background:#fff;border:1px solid #d5dbdb;border-radius:4px;box-shadow:0 4px 16px rgba(0,0,0,.15);z-index:50;min-width:200px;margin-top:2px;}
+.state-opt{padding:9px 16px;font-size:13px;cursor:pointer;}
+.state-opt:hover{background:#f2f8ff;}
+.state-opt.red{color:#d13212;}
+.state-opt.red:hover{background:#fff5f5;}
+.state-opt.dim{opacity:.4;cursor:default;pointer-events:none;}
+</style>
+</head>
+<body>
+<!-- TOP NAV -->
+<nav class="topnav">
+  <div class="tn-logo">aws</div>
+  <div class="tn-btn">⊞ Servicios</div>
+  <div class="tn-search"><span style="color:#8a9ba8">🔍</span><input placeholder="Buscar  [Alt+S]"></div>
+  <div class="tn-right">
+    <div class="tn-region">🔔</div>
+    <div class="tn-region">⚙</div>
+    <div class="tn-region">Estados Unidos (Norte de Virginia) ▾</div>
+    <div class="tn-account">cuenta-curso (216569733497) ▾</div>
+  </div>
+</nav>
+<div class="breadcrumb">
+  <span class="bc-link">EC2</span><span style="color:#aab7b8">›</span>
+  <span class="bc-link">Instancias</span><span style="color:#aab7b8">›</span>
+  <span>Instancias</span>
+</div>
+<div class="layout">
+  <aside class="sidebar">
+    <div class="sb-group">EC2</div>
+    <div class="sb-item">📊 Panel</div>
+    <div class="sb-head">▾ Instancias</div>
+    <div class="sb-item active">Instancias</div>
+    <div class="sb-item">Tipos de instancia</div>
+    <div class="sb-item">Plantillas de lanzamiento</div>
+    <div class="sb-head">▾ Imágenes</div>
+    <div class="sb-item">AMI</div>
+    <div class="sb-item">Catálogo de AMI</div>
+    <div class="sb-head">▾ Almacenamiento</div>
+    <div class="sb-item">Volúmenes</div>
+    <div class="sb-item">Instantáneas</div>
+    <div class="sb-head">▾ Red y seguridad</div>
+    <div class="sb-item">Grupos de seguridad</div>
+    <div class="sb-item">IPs elásticas</div>
+    <div class="sb-item">Pares de claves</div>
+  </aside>
+
+  <div class="main">
+    <div class="success-bar" id="sucBanner" style="display:none">
+      <div class="sb-icon">✅</div>
+      <div><div class="sb-title">Instancia lanzada correctamente</div>
+      <div id="sucText" style="font-size:13px;color:#16191f;margin-top:2px"></div></div>
+      <div class="sb-x" onclick="this.parentElement.style.display='none'">✕</div>
+    </div>
+
+    <div class="page-header">
+      <div style="display:flex;align-items:center;gap:8px">
+        <span class="page-title">Instancias</span>
+        <span id="pageCount" style="font-size:14px;color:#687078">(3)</span>
+      </div>
+      <div class="page-actions">
+        <button class="btn btn-secondary" id="btnConnect" onclick="openConnect()" disabled>Conectar</button>
+        <div style="position:relative" id="stateWrap">
+          <button class="btn btn-secondary" id="btnState" onclick="toggleMenu()" disabled>Estado de instancia ▾</button>
+          <div class="state-menu" id="stateMenu">
+            <div class="state-opt" id="menuStart" onclick="doAction('start')">▶ Iniciar instancia</div>
+            <div class="state-opt" id="menuStop" onclick="doAction('stop')">⏹ Detener instancia</div>
+            <div class="state-opt" id="menuReboot" onclick="doAction('reboot')">↺ Reiniciar instancia</div>
+            <div class="state-opt red" onclick="openTermModal()">🗑 Terminar instancia</div>
+          </div>
+        </div>
+        <button class="btn btn-secondary" id="btnActions" disabled>Acciones ▾</button>
+        <button class="btn btn-primary" onclick="openWizard()">Lanzar instancias</button>
+      </div>
+    </div>
+
+    <div class="toolbar">
+      <div class="filters" style="padding:0">
+        <div class="filter-box"><span>🔍</span><input id="filterInp" placeholder="Filtrar instancias" oninput="renderTable()"></div>
+      </div>
+    </div>
+
+    <div class="table-area">
+      <div class="table-wrap">
+        <table>
+          <thead><tr>
+            <th style="width:40px"><input type="checkbox" id="selAll" onchange="toggleAll(this)"></th>
+            <th>Nombre</th><th>ID de instancia</th><th>Estado</th>
+            <th>Tipo</th><th>Comprobación</th><th>Zona</th><th>IPv4 pública</th>
+          </tr></thead>
+          <tbody id="instBody"></tbody>
+        </table>
+      </div>
+
+      <div class="detail" id="detPanel">
+        <div class="d-header">
+          <span class="d-title" id="dTitle">Detalles</span>
+          <span class="d-close" onclick="closeDetail()">✕</span>
+        </div>
+        <div class="d-tabs">
+          <div class="d-tab active" onclick="dTab(this,'det')">Detalles</div>
+          <div class="d-tab" onclick="dTab(this,'sec')">Seguridad</div>
+          <div class="d-tab" onclick="dTab(this,'net')">Redes</div>
+          <div class="d-tab" onclick="dTab(this,'sto')">Almacenamiento</div>
+        </div>
+        <div class="d-body" id="dBody"></div>
+        <div class="d-actions">
+          <button class="btn btn-secondary" style="font-size:12px" onclick="openConnect()">🔌 Conectar</button>
+          <button class="btn btn-secondary" style="font-size:12px" onclick="doAction('start')">▶ Iniciar</button>
+          <button class="btn btn-secondary" style="font-size:12px" onclick="doAction('stop')">⏹ Detener</button>
+          <button class="btn btn-secondary" style="font-size:12px" onclick="doAction('reboot')">↺ Reiniciar</button>
+          <button class="btn btn-danger" style="font-size:12px" onclick="openTermModal()">🗑 Terminar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toasts" id="toasts"></div>
+
+<!-- TERMINATE MODAL -->
+<div class="overlay" id="termModal">
+  <div class="modal">
+    <div class="m-head"><span class="m-title">Terminar instancia</span><span class="m-close" onclick="closeM('termModal')">✕</span></div>
+    <div class="m-body">
+      <div class="danger-box">⚠️ <span><strong>Acción irreversible.</strong> Todos los datos del almacén de instancias se perderán permanentemente.</span></div>
+      <div style="font-size:13px">Para confirmar, escriba <strong>terminar</strong>:</div>
+      <input class="m-input" id="termInp" placeholder="terminar" oninput="chkTermInp(this)">
+    </div>
+    <div class="m-foot">
+      <button class="btn btn-secondary" onclick="closeM('termModal')">Cancelar</button>
+      <button class="btn btn-danger" id="termBtn" disabled onclick="doAction('terminate')">Terminar</button>
+    </div>
+  </div>
+</div>
+
+<!-- CONNECT MODAL -->
+<div class="overlay" id="connModal">
+  <div class="modal" style="max-width:640px">
+    <div class="m-head"><span class="m-title">Conectarse a la instancia</span><span class="m-close" onclick="closeM('connModal')">✕</span></div>
+    <div class="m-body">
+      <div style="display:flex;gap:0;border-bottom:1px solid #eaeded;margin-bottom:14px">
+        <div id="ct1" style="padding:8px 14px;font-size:13px;cursor:pointer;border-bottom:2px solid #ec7211;color:#ec7211;font-weight:600">EC2 Instance Connect</div>
+        <div id="ct2" style="padding:8px 14px;font-size:13px;cursor:pointer;border-bottom:2px solid transparent;color:#687078" onclick="switchCT(this,'ct2')">Session Manager</div>
+        <div id="ct3" style="padding:8px 14px;font-size:13px;cursor:pointer;border-bottom:2px solid transparent;color:#687078" onclick="switchCT(this,'ct3')">Cliente SSH</div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
+        <div><div class="f-label" style="font-size:13px">Usuario</div><input class="f-inp" value="ec2-user"></div>
+        <div><div class="f-label" style="font-size:13px">Puerto</div><input class="f-inp" value="22"></div>
+      </div>
+      <button id="connBtn" class="btn btn-primary" onclick="simulateSSH()">Conectar</button>
+      <div id="termArea" style="display:none;margin-top:14px">
+        <div class="term-hdr"><div class="t-dot t-red"></div><div class="t-dot t-yellow"></div><div class="t-dot t-green"></div><div class="term-ttl">ec2-user@<span id="termHost"></span></div></div>
+        <div class="terminal" id="termBody"></div>
+      </div>
+    </div>
+    <div class="m-foot"><button class="btn btn-secondary" onclick="closeM('connModal')">Cerrar</button></div>
+  </div>
+</div>
+
+<!-- WIZARD -->
+<div class="wz-overlay" id="wzOl">
+  <div class="wz-wrap">
+    <div class="wizard">
+      <div class="wz-hdr"><span class="wz-title">Lanzar una instancia</span><span class="wz-x" onclick="closeWizard()">✕</span></div>
+      <div class="wz-steps" id="wzSteps">
+        <div class="wz-step active" id="ws1" onclick="goStep(1)"><div class="wz-num">1</div>Nombre</div>
+        <div class="wz-step" id="ws2" onclick="goStep(2)"><div class="wz-num">2</div>AMI</div>
+        <div class="wz-step" id="ws3" onclick="goStep(3)"><div class="wz-num">3</div>Tipo</div>
+        <div class="wz-step" id="ws4" onclick="goStep(4)"><div class="wz-num">4</div>Par de claves</div>
+        <div class="wz-step" id="ws5" onclick="goStep(5)"><div class="wz-num">5</div>Red</div>
+        <div class="wz-step" id="ws6" onclick="goStep(6)"><div class="wz-num">6</div>Almacenamiento</div>
+        <div class="wz-step" id="ws7" onclick="goStep(7)"><div class="wz-num">7</div>Resumen</div>
+      </div>
+      <div class="wz-content">
+        <div class="wz-main" id="wzMain"></div>
+        <div class="wz-side" id="wzSide">
+          <div style="font-size:14px;font-weight:700;margin-bottom:12px;border-bottom:1px solid #eaeded;padding-bottom:8px">▼ Resumen</div>
+          <div id="sumContent"></div>
+          <div style="margin-top:14px">
+            <button class="btn btn-secondary" style="width:100%;margin-bottom:8px" onclick="closeWizard()">Cancelar</button>
+            <button class="btn btn-primary" style="width:100%;font-size:14px" onclick="launchIt()">Lanzar instancia</button>
+          </div>
+        </div>
+      </div>
+      <div class="wz-foot">
+        <button class="btn btn-secondary" id="wzBack" onclick="wzPrev()" style="display:none">‹ Anterior</button>
+        <span id="wzInd" style="font-size:12px;color:#687078">Paso 1 de 7</span>
+        <button class="btn btn-primary" id="wzFwd" onclick="wzNext()">Siguiente ›</button>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+let instances=[
+  {id:'i-0a1b2c3d4e5f',name:'web-server-prod',state:'running',type:'t3.medium',check:'✓ 2/2',az:'us-east-1a',ip:'54.123.45.67',dns:'ec2-54-123-45-67.compute-1.amazonaws.com',ami:'Amazon Linux 2023',sg:'sg-launch-wizard',vpc:'vpc-0a1b2c3d4',launched:'25/04/2026'},
+  {id:'i-1b2c3d4e5f6a',name:'db-server-prod',state:'running',type:'r6g.large',check:'✓ 2/2',az:'us-east-1b',ip:'52.87.65.43',dns:'ec2-52-87-65-43.compute-1.amazonaws.com',ami:'Amazon Linux 2023',sg:'sg-db-prod',vpc:'vpc-0a1b2c3d4',launched:'20/04/2026'},
+  {id:'i-2c3d4e5f6a7b',name:'dev-instance-01',state:'stopped',type:'t2.micro',check:'—',az:'us-east-1a',ip:'—',dns:'—',ami:'Ubuntu 22.04 LTS',sg:'sg-default',vpc:'vpc-0a1b2c3d4',launched:'10/04/2026'},
+];
+let cfg={name:'',ami:'amazon-linux',amiName:'Amazon Linux 2023 AMI',amiId:'ami-098e39bafa7e7303d',itype:'t2.micro',kp:'vockey',sg:'launch-wizard-1',storage:'8'};
+let selId=null, wzStep=1;
+const amiMap={'amazon-linux':{n:'Amazon Linux 2023 AMI 2023.11',id:'ami-098e39bafa7e7303d'},'ubuntu':{n:'Ubuntu Server 22.04 LTS',id:'ami-0e86e20dae9224db8'},'windows':{n:'Windows Server 2022 Base',id:'ami-07d9456e59793a7d5'},'redhat':{n:'Red Hat Enterprise Linux 9',id:'ami-0583d8c7a9c35822c'},'debian':{n:'Debian 12 (HVM)',id:'ami-064519b8c76274859'}};
+
+function stHtml(s){const m={running:{c:'s-running',l:'en ejecución'},stopped:{c:'s-stopped',l:'detenida'},pending:{c:'s-pending',l:'pendiente'},stopping:{c:'s-stopping',l:'deteniéndose'},terminated:{c:'s-terminated',l:'terminada'},rebooting:{c:'s-rebooting',l:'reiniciando'}};const d=m[s]||{c:'s-stopped',l:s};return`<span class="status ${d.c}"><span class="status-dot"></span>${d.l}</span>`;}
+
+function renderTable(){
+  const q=document.getElementById('filterInp').value.toLowerCase();
+  const tbody=document.getElementById('instBody');
+  tbody.innerHTML='';let n=0;
+  instances.forEach(i=>{
+    if(i.state==='terminated')return;
+    if(q&&!JSON.stringify(i).toLowerCase().includes(q))return;
+    n++;
+    const tr=document.createElement('tr');
+    tr.dataset.id=i.id;
+    if(selId===i.id)tr.classList.add('sel-row');
+    tr.innerHTML=`<td><input type="checkbox" class="rcb" ${selId===i.id?'checked':''}></td><td><span class="link">${i.name||'—'}</span></td><td><span class="link">${i.id}</span></td><td>${stHtml(i.state)}</td><td>${i.type}</td><td>${i.check}</td><td>${i.az}</td><td>${i.ip}</td>`;
+    tr.addEventListener('click',()=>selRow(i.id));
+    tbody.appendChild(tr);
+  });
+  document.getElementById('pageCount').textContent=`(${n})`;
+  updTb();
+}
+
+function selRow(id){selId=selId===id?null:id;renderTable();if(selId)openDetail(selId);else closeDetail();}
+function toggleAll(cb){document.querySelectorAll('.rcb').forEach(c=>c.checked=cb.checked);if(!cb.checked){selId=null;renderTable();closeDetail();}}
+
+function updTb(){
+  const i=instances.find(x=>x.id===selId);
+  const has=!!i;
+  document.getElementById('btnConnect').disabled=!has||i.state!=='running';
+  document.getElementById('btnState').disabled=!has;
+  document.getElementById('btnActions').disabled=!has;
+  if(i){
+    const r=i.state==='running',s=i.state==='stopped';
+    document.getElementById('menuStart').className='state-opt'+(s?'':' dim');
+    document.getElementById('menuStop').className='state-opt'+(r?'':' dim');
+    document.getElementById('menuReboot').className='state-opt'+(r?'':' dim');
+  }
+}
+
+function toggleMenu(){const m=document.getElementById('stateMenu');m.style.display=m.style.display==='block'?'none':'block';}
+document.addEventListener('click',e=>{if(!document.getElementById('stateWrap').contains(e.target))document.getElementById('stateMenu').style.display='none';});
+
+function doAction(action){
+  document.getElementById('stateMenu').style.display='none';
+  closeM('termModal');
+  const i=instances.find(x=>x.id===selId);
+  if(!i)return;
+  const m={
+    stop:{tr:'stopping',fn:'stopped',d:3000,msg:`Instancia ${i.id} detenida correctamente.`},
+    start:{tr:'pending',fn:'running',d:4500,msg:`Instancia ${i.id} iniciada. IP asignada.`},
+    reboot:{tr:'rebooting',fn:'running',d:3500,msg:`Instancia ${i.id} reiniciada correctamente.`},
+    terminate:{tr:'stopping',fn:'terminated',d:3500,msg:`Instancia ${i.id} terminada correctamente.`},
+  };
+  const t=m[action];if(!t)return;
+  toast('info','Procesando',`${action==='stop'?'Deteniendo':action==='start'?'Iniciando':action==='reboot'?'Reiniciando':'Terminando'} instancia...`);
+  i.state=t.tr;
+  if(action==='stop'||action==='terminate'){i.ip='—';i.check='—';}
+  renderTable();if(selId)openDetail(selId);
+  setTimeout(()=>{
+    i.state=t.fn;
+    if(action==='start'){
+      const ip=`${54+Math.floor(Math.random()*50)}.${Math.floor(Math.random()*200+50)}.${Math.floor(Math.random()*200+50)}.${Math.floor(Math.random()*200)}`;
+      i.ip=ip;i.dns=`ec2-${ip.replace(/\./g,'-')}.compute-1.amazonaws.com`;i.check='✓ 2/2';
+    }
+    if(action==='terminate'){selId=null;closeDetail();}
+    toast('success','¡Éxito!',t.msg);
+    renderTable();if(selId)openDetail(selId);
+  },t.d);
+}
+
+function openDetail(id){
+  const i=instances.find(x=>x.id===id);if(!i)return;
+  document.getElementById('dTitle').textContent=i.name||i.id;
+  document.getElementById('detPanel').classList.add('open');
+  renderDTab('det',i);
+}
+function closeDetail(){document.getElementById('detPanel').classList.remove('open');}
+function dTab(el,tab){
+  document.querySelectorAll('.d-tab').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');
+  const i=instances.find(x=>x.id===selId);if(i)renderDTab(tab,i);
+}
+function renderDTab(tab,i){
+  const b=document.getElementById('dBody');
+  if(tab==='det'){b.innerHTML=`<div style="font-size:12px;font-weight:700;margin-bottom:8px;border-bottom:1px solid #eaeded;padding-bottom:5px">RESUMEN</div>${[['ID',i.id],['Estado','--ST--'],['Tipo',i.type],['Nombre',i.name],['AMI',i.ami],['Lanzamiento',i.launched],['Zona',i.az],['IPv4 pública',i.ip],['Comprobación',i.check]].map(([k,v])=>`<div class="d-row"><span class="d-key">${k}</span><span class="d-val">${v==='--ST--'?stHtml(i.state):v}</span></div>`).join('')}`;}
+  else if(tab==='sec'){b.innerHTML=`<div style="font-size:12px;font-weight:700;margin-bottom:8px;border-bottom:1px solid #eaeded;padding-bottom:5px">SEGURIDAD</div><div class="d-row"><span class="d-key">Grupo seguridad</span><span class="d-val link">${i.sg}</span></div><div class="d-row"><span class="d-key">Par de claves</span><span class="d-val">vockey</span></div><div class="d-row"><span class="d-key">SSH (22)</span><span class="d-val">0.0.0.0/0</span></div><div class="d-row"><span class="d-key">HTTP (80)</span><span class="d-val">0.0.0.0/0</span></div>`;}
+  else if(tab==='net'){b.innerHTML=`<div style="font-size:12px;font-weight:700;margin-bottom:8px;border-bottom:1px solid #eaeded;padding-bottom:5px">REDES</div><div class="d-row"><span class="d-key">VPC</span><span class="d-val link">${i.vpc}</span></div><div class="d-row"><span class="d-key">Subred</span><span class="d-val link">subnet-0a1b2c3d</span></div><div class="d-row"><span class="d-key">IPv4 privada</span><span class="d-val">172.31.0.42</span></div><div class="d-row"><span class="d-key">IPv4 pública</span><span class="d-val">${i.ip}</span></div><div class="d-row"><span class="d-key">DNS público</span><span class="d-val" style="font-size:11px">${i.dns}</span></div>`;}
+  else if(tab==='sto'){b.innerHTML=`<div style="font-size:12px;font-weight:700;margin-bottom:8px;border-bottom:1px solid #eaeded;padding-bottom:5px">ALMACENAMIENTO</div><div class="d-row"><span class="d-key">Volumen raíz</span><span class="d-val link">vol-0a1b2c3d4e5f</span></div><div class="d-row"><span class="d-key">Tipo</span><span class="d-val">gp3</span></div><div class="d-row"><span class="d-key">Tamaño</span><span class="d-val">8 GiB</span></div><div class="d-row"><span class="d-key">IOPS</span><span class="d-val">3000</span></div><div class="d-row"><span class="d-key">Rendimiento</span><span class="d-val">125 MB/s</span></div>`;}
+}
+
+function openTermModal(){document.getElementById('termModal').classList.add('on');document.getElementById('termInp').value='';document.getElementById('termBtn').disabled=true;}
+function closeM(id){document.getElementById(id).classList.remove('on');}
+function chkTermInp(el){document.getElementById('termBtn').disabled=el.value!=='terminar';}
+
+function openConnect(){
+  const i=instances.find(x=>x.id===selId);if(!i||i.state!=='running')return;
+  document.getElementById('termHost').textContent=i.ip;
+  document.getElementById('termArea').style.display='none';
+  document.getElementById('connBtn').style.display='';
+  document.getElementById('connModal').classList.add('on');
+}
+function switchCT(el,id){document.querySelectorAll('[id^=ct]').forEach(t=>{t.style.borderBottomColor='transparent';t.style.color='#687078';t.style.fontWeight='400';});el.style.borderBottomColor='#ec7211';el.style.color='#ec7211';el.style.fontWeight='600';}
+function simulateSSH(){
+  const i=instances.find(x=>x.id===selId);
+  document.getElementById('termArea').style.display='block';
+  document.getElementById('connBtn').style.display='none';
+  const b=document.getElementById('termBody');b.innerHTML='';
+  const lines=[
+    {d:0,h:`<div class="t-out">Connecting to ${i.ip}:22...</div>`},
+    {d:900,h:`<div class="t-out">Warning: Permanently added '${i.ip}' (ED25519) to known hosts.</div>`},
+    {d:1800,h:`<div style="color:#fff;margin:6px 0">   __|  __|_  )   Amazon Linux 2023 AMI<br>   _|  (     /   https://aws.amazon.com/linux/amazon-linux-2023<br>  ___|\\___|\\___|</div>`},
+    {d:2400,h:`<div class="t-out">2 package(s) needed for security, out of 5 available.</div><div class="t-out">Run "sudo yum update" to apply all updates.</div>`},
+    {d:3000,h:`<div><span class="t-prompt">[ec2-user@ip-172-31-0-42 ~]$</span> <span class="t-cursor"></span></div>`},
+  ];
+  lines.forEach(l=>setTimeout(()=>{b.innerHTML+=l.h;b.scrollTop=b.scrollHeight;},l.d));
+}
+
+function toast(type,title,msg){
+  const icons={success:'✅',info:'ℹ️',warning:'⚠️',error:'❌'};
+  const d=document.createElement('div');
+  d.className=`toast ${type}`;
+  d.innerHTML=`<div class="t-ico">${icons[type]}</div><div><div class="t-title">${title}</div><div class="t-msg">${msg}</div></div><div class="t-x" onclick="this.parentElement.remove()">✕</div>`;
+  document.getElementById('toasts').appendChild(d);
+  setTimeout(()=>{d.style.animation='fadeOut .4s ease forwards';setTimeout(()=>d.remove(),400);},5000);
+}
+
+/* ── WIZARD ── */
+const wzData={
+  1:()=>`<div class="s-title">Nombre y etiquetas</div><div class="s-desc">Dé a su instancia un nombre para identificarla.</div><div class="field"><div class="f-label">Nombre</div><input class="f-inp" id="wName" value="${cfg.name}" placeholder="mi-instancia" oninput="cfg.name=this.value;updSum()" style="max-width:380px"><div class="f-hint">Se agrega etiqueta automáticamente.</div></div>`,
+  2:()=>`<div class="s-title">Imagen de máquina de Amazon (AMI)</div><div class="s-desc">Seleccione el sistema operativo para su instancia.</div>
+    <input class="f-inp" placeholder="Busque en el catálogo..." style="margin-bottom:12px">
+    <div class="ami-grid">
+      ${[['amazon-linux','🟧','Amazon Linux'],['ubuntu','🟠','Ubuntu'],['windows','🪟','Windows'],['redhat','🔴','Red Hat'],['debian','🔵','Debian']].map(([id,ico,lbl])=>`<div class="ami-ico ${cfg.ami===id?'sel':''}" onclick="cfg.ami='${id}';cfg.amiName=amiMap['${id}'].n;cfg.amiId=amiMap['${id}'].id;renderWzStep()"><div style="font-size:26px">${ico}</div><div class="ami-ico-lbl">${lbl}</div></div>`).join('')}
+    </div>
+    <div style="margin-top:12px;background:#fafafa;border:2px solid #ec7211;border-radius:2px;padding:10px 14px;display:flex;align-items:center;gap:12px">
+      <input type="radio" checked style="accent-color:#ec7211">
+      <div><div style="font-weight:700;font-size:13px">${amiMap[cfg.ami].n}</div><div style="font-size:12px;color:#687078">${amiMap[cfg.ami].id}</div></div>
+      <div style="margin-left:auto;display:flex;gap:6px"><span class="badge-free">Nivel gratuito</span><span class="badge-arch">x86_64</span></div>
+    </div>`,
+  3:()=>`<div class="s-title">Tipo de instancia</div><div class="s-desc">Combinaciones de CPU, memoria, almacenamiento y red.</div>
+    <table class="it-table">
+      <tr><th></th><th>Tipo</th><th>vCPU</th><th>Memoria</th><th>Almacenamiento</th><th>Red</th></tr>
+      ${[['t2.micro','1','1 GiB','Solo EBS','Bajo-Moderado',true],['t3.micro','2','1 GiB','Solo EBS','Hasta 5 Gbps',true],['t3.small','2','2 GiB','Solo EBS','Hasta 5 Gbps',false],['t3.medium','2','4 GiB','Solo EBS','Hasta 5 Gbps',false],['m5.large','2','8 GiB','Solo EBS','Hasta 10 Gbps',false],['c5.xlarge','4','8 GiB','Solo EBS','Hasta 10 Gbps',false],['r5.large','2','16 GiB','Solo EBS','Hasta 10 Gbps',false]].map(([id,vcpu,mem,st,net,free])=>`<tr class="${cfg.itype===id?'sel':''}" onclick="cfg.itype='${id}';updSum();renderWzStep()"><td><input type="radio" name="it" ${cfg.itype===id?'checked':''} style="accent-color:#ec7211"></td><td><strong>${id}</strong>${free?` <span class="badge-free">Free</span>`:''}</td><td>${vcpu}</td><td>${mem}</td><td>${st}</td><td>${net}</td></tr>`).join('')}
+    </table>`,
+  4:()=>`<div class="s-title">Par de claves (inicio de sesión)</div><div class="s-desc">Necesita un par de claves para conectarse de forma segura a su instancia mediante SSH.</div>
+    <div class="field"><div class="f-label">Nombre del par de claves</div>
+    <div style="display:flex;gap:8px">
+      <select class="f-sel" onchange="cfg.kp=this.value;updSum()" style="max-width:280px">
+        <option value="vockey">vockey</option><option value="mi-clave">mi-clave-personal</option><option value="">Continuar sin par de claves</option>
+      </select>
+      <button class="btn btn-secondary" onclick="toast('success','Par de claves creado','Descargando mi-clave-nueva.pem...')">Crear nuevo par</button>
+    </div></div>
+    <div class="field"><div class="f-label">Tipo</div>
+    <label style="margin-right:16px;cursor:pointer"><input type="radio" name="kt" checked style="accent-color:#ec7211"> RSA</label>
+    <label style="cursor:pointer"><input type="radio" name="kt" style="accent-color:#ec7211"> ED25519</label></div>
+    <div class="field"><div class="f-label">Formato</div>
+    <label style="margin-right:16px;cursor:pointer"><input type="radio" name="kf" checked style="accent-color:#ec7211"> .pem (OpenSSH)</label>
+    <label style="cursor:pointer"><input type="radio" name="kf" style="accent-color:#ec7211"> .ppk (PuTTY)</label></div>`,
+  5:()=>`<div class="s-title">Configuración de red</div><div class="s-desc">Configure la VPC, subred y grupo de seguridad para su instancia.</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px">
+      <div class="field" style="margin:0"><div class="f-label">VPC</div><select class="f-sel"><option>vpc-0a1b2c3d (default)</option></select></div>
+      <div class="field" style="margin:0"><div class="f-label">Subred</div><select class="f-sel"><option>subnet-0a1b2c3d (us-east-1a)</option><option>subnet-1b2c3d4e (us-east-1b)</option></select></div>
+    </div>
+    <div class="field"><div class="f-label">Asignar IP pública</div><select class="f-sel" style="max-width:200px"><option>Habilitar</option><option>Deshabilitar</option></select></div>
+    <div style="font-weight:700;font-size:14px;margin:12px 0 8px">Firewall (grupos de seguridad)</div>
+    <label style="display:flex;align-items:center;gap:8px;margin-bottom:10px;cursor:pointer"><input type="radio" name="sg" checked style="accent-color:#ec7211"> Crear grupo de seguridad</label>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:10px">
+      <div><div class="f-label">Nombre</div><input class="f-inp" value="launch-wizard-1" oninput="cfg.sg=this.value;updSum()"></div>
+      <div><div class="f-label">Descripción</div><input class="f-inp" value="launch-wizard-1 created 2026-04-25"></div>
+    </div>
+    <div style="display:grid;grid-template-columns:130px 70px 110px 1fr auto;gap:6px;background:#fafafa;border:1px solid #eaeded;border-radius:2px;padding:10px;align-items:center">
+      <select style="border:1px solid #aab7b8;border-radius:2px;padding:5px;font-size:12px"><option>ssh</option><option>http</option><option>https</option></select>
+      <input value="TCP" readonly style="border:1px solid #aab7b8;border-radius:2px;padding:5px;font-size:12px;background:#f2f3f3">
+      <input value="22" style="border:1px solid #aab7b8;border-radius:2px;padding:5px;font-size:12px">
+      <select style="border:1px solid #aab7b8;border-radius:2px;padding:5px;font-size:12px"><option>0.0.0.0/0</option><option>Mi IP</option></select>
+      <span style="cursor:pointer;color:#d13212">🗑</span>
+    </div>`,
+  6:()=>`<div class="s-title">Configurar almacenamiento</div><div class="s-desc">Especifique los volúmenes a asociar a la instancia.</div>
+    <div style="background:#f2f8f0;border:1px solid #1d8102;border-radius:2px;padding:10px 14px;font-size:13px;margin-bottom:14px">ℹ️ El nivel gratuito incluye hasta 30 GB de almacenamiento EBS gp3.</div>
+    <div style="display:grid;grid-template-columns:80px 140px 90px 90px auto;gap:8px;font-size:12px;font-weight:700;color:#545b64;margin-bottom:6px;align-items:center">
+      <span>Tamaño (GiB)</span><span>Tipo de volumen</span><span>IOPS</span><span>Rendimiento</span><span></span>
+    </div>
+    <div style="display:grid;grid-template-columns:80px 140px 90px 90px auto;gap:8px;background:#fafafa;border:1px solid #eaeded;border-radius:2px;padding:10px;align-items:center">
+      <input class="f-inp" type="number" value="8" min="1" max="30" id="stoSz" oninput="cfg.storage=this.value;updSum()" style="padding:5px">
+      <select class="f-sel" style="padding:5px"><option>gp3</option><option>gp2</option><option>io1</option></select>
+      <input class="f-inp" value="3000" style="padding:5px">
+      <input class="f-inp" value="125" style="padding:5px">
+      <span style="cursor:pointer;color:#d13212">🗑</span>
+    </div>`,
+  7:()=>`<div class="s-title">Revisar y lanzar</div><div class="s-desc">Revise su configuración antes de lanzar la instancia.</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px">
+      ${[['📝 Detalles',[['Nombre',cfg.name||'—'],['Tipo',cfg.itype],['Región','us-east-1']]],['🖼 AMI',[['Nombre AMI',cfg.amiName],['ID',cfg.amiId]]],['🔒 Seguridad',[['Par de claves',cfg.kp||'Ninguno'],['Grupo de seg.',cfg.sg]]],['💾 Almacenamiento',[['Volumen raíz',`${cfg.storage} GiB gp3`],['IOPS','3000']]]].map(([title,rows])=>`
+        <div style="background:#fafafa;border:1px solid #eaeded;border-radius:2px;padding:12px">
+          <div style="font-weight:700;font-size:13px;margin-bottom:10px;border-bottom:1px solid #eaeded;padding-bottom:5px">${title}</div>
+          ${rows.map(([k,v])=>`<div class="d-row" style="margin-bottom:5px"><span class="d-key">${k}</span><span>${v}</span></div>`).join('')}
+        </div>`).join('')}
+    </div>
+    <div style="background:#fff8f0;border:1px solid #ec7211;border-radius:4px;padding:14px 18px;display:flex;align-items:center;justify-content:space-between">
+      <div><div style="font-weight:700">Costo estimado</div><div style="font-size:13px;color:#545b64;margin-top:2px">t2.micro – Nivel gratuito: 0 USD/hr (750 hrs/mes)</div></div>
+      <button class="btn btn-primary" style="padding:10px 28px;font-size:15px" onclick="launchIt()">Lanzar instancia</button>
+    </div>`
+};
+
+function updSum(){
+  document.getElementById('sumContent').innerHTML=`
+    <div style="font-size:12px;font-weight:700;margin-bottom:4px">N.° de instancias</div>
+    <input style="width:100%;border:1px solid #aab7b8;border-radius:2px;padding:5px 8px;font-size:13px;margin-bottom:12px" value="1">
+    <div style="font-size:12px;font-weight:700;color:#0073bb;margin-bottom:2px">Imagen (AMI)</div>
+    <div style="font-size:12px;color:#16191f;margin-bottom:2px">${cfg.amiName}</div>
+    <div style="font-size:11px;color:#687078;margin-bottom:12px">${cfg.amiId}</div>
+    <div style="font-size:12px;font-weight:700;color:#0073bb;margin-bottom:2px">Tipo de instancia</div>
+    <div style="font-size:13px;margin-bottom:12px">${cfg.itype}</div>
+    <div style="font-size:12px;font-weight:700;color:#0073bb;margin-bottom:2px">Par de claves</div>
+    <div style="font-size:13px;margin-bottom:12px">${cfg.kp||'Ninguno'}</div>
+    <div style="font-size:12px;font-weight:700;color:#0073bb;margin-bottom:2px">Almacenamiento</div>
+    <div style="font-size:13px">Volúmenes: 1 (${cfg.storage} GiB)</div>`;
+}
+
+function renderWzStep(){
+  document.getElementById('wzMain').innerHTML=wzData[wzStep]();
+  updSum();
+  for(let i=1;i<=7;i++){const e=document.getElementById('ws'+i);if(e)e.className='wz-step'+(i===wzStep?' active':i<wzStep?' done':'');}
+  document.getElementById('wzInd').textContent=`Paso ${wzStep} de 7`;
+  document.getElementById('wzBack').style.display=wzStep>1?'':'none';
+  document.getElementById('wzFwd').textContent=wzStep===7?'Lanzar instancia ›':'Siguiente ›';
+}
+
+function wzNext(){if(wzStep===7){launchIt();return;}wzStep++;renderWzStep();}
+function wzPrev(){if(wzStep>1){wzStep--;renderWzStep();}}
+function goStep(n){wzStep=n;renderWzStep();}
+
+function openWizard(){
+  wzStep=1;cfg={name:'',ami:'amazon-linux',amiName:'Amazon Linux 2023 AMI',amiId:'ami-098e39bafa7e7303d',itype:'t2.micro',kp:'vockey',sg:'launch-wizard-1',storage:'8'};
+  document.getElementById('wzOl').classList.add('on');
+  document.getElementById('wzSteps').style.display='flex';
+  document.getElementById('wzFwd').style.display='';
+  renderWzStep();
+}
+function closeWizard(){document.getElementById('wzOl').classList.remove('on');document.getElementById('wzSteps').style.display='flex';document.getElementById('wzFwd').style.display='';}
+
+function launchIt(){
+  document.getElementById('wzMain').innerHTML=`
+    <div class="launch-screen">
+      <div class="l-spin"></div>
+      <div style="font-size:20px;font-weight:700;margin-bottom:8px">Lanzando instancia...</div>
+      <div style="font-size:13px;color:#545b64;margin-bottom:16px">AWS está aprovisionando su instancia. Esto tarda entre 30 y 60 segundos.</div>
+      <div class="prog-bar"><div class="prog-fill" id="pFill" style="width:0"></div></div>
+      ${['Iniciando recursos...','Asignando hardware...','Configurando red...','Adjuntando volúmenes EBS...','Ejecutando verificaciones...','¡Instancia iniciada!'].map((s,i)=>`<div class="l-step"><div class="l-dot" id="ld${i}"></div><span>${s}</span></div>`).join('')}
+    </div>`;
+  document.getElementById('sumContent').innerHTML='';
+  document.getElementById('wzBack').style.display='none';
+  document.getElementById('wzFwd').style.display='none';
+  document.getElementById('wzSteps').style.display='none';
+
+  let pct=0,si=0;
+  const iv=setInterval(()=>{
+    pct+=16;if(pct>98)pct=98;
+    const pf=document.getElementById('pFill');if(pf)pf.style.width=pct+'%';
+    if(si<6){const d=document.getElementById('ld'+si);if(d){d.className='l-dot done';d.textContent='✓';}si++;}
+  },700);
+
+  setTimeout(()=>{
+    clearInterval(iv);
+    const pf=document.getElementById('pFill');if(pf)pf.style.width='100%';
+    const newId='i-'+Math.random().toString(16).slice(2,14);
+    const newInst={id:newId,name:cfg.name||'Mi instancia',state:'pending',type:cfg.itype,check:'Inicializando',az:'us-east-1a',ip:'—',dns:'—',ami:cfg.amiName,sg:cfg.sg,vpc:'vpc-0a1b2c3d4',launched:new Date().toLocaleDateString('es-GT')};
+    instances.unshift(newInst);
+    closeWizard();
+    document.getElementById('sucText').textContent=`La instancia ${newId} (${newInst.name}) está iniciando. Puede tardar unos minutos.`;
+    document.getElementById('sucBanner').style.display='flex';
+    selId=newId;renderTable();openDetail(newId);
+    toast('info','Instancia pendiente',`${newId} está iniciando...`);
+    setTimeout(()=>{
+      newInst.state='running';
+      const ip=`${54+Math.floor(Math.random()*50)}.${Math.floor(Math.random()*200+50)}.${Math.floor(Math.random()*200+50)}.${Math.floor(Math.random()*200)}`;
+      newInst.ip=ip;newInst.dns=`ec2-${ip.replace(/\./g,'-')}.compute-1.amazonaws.com`;newInst.check='✓ 2/2';
+      renderTable();if(selId===newId)openDetail(newId);
+      toast('success','Instancia en ejecución',`${newId} está corriendo. IP pública: ${ip}`);
+    },5000);
+  },4500);
+}
+
+renderTable();
+</script>
+</body></html>
